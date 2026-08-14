@@ -1,7 +1,7 @@
 # Lab 1 — Peer Review Record
 
-**Author:** Patitta Daensikaew — <your_student_id> — GitHub: @Patitta-23
-**Peer reviewer:** <partner_name> — <partner_student_id> — GitHub: @<partner_username>
+**Author:** Patitta Daensikaew — 67070505221 — GitHub: @Patitta-23
+**Peer reviewer:** Nannaphat Kaenphanao — 67070505219 — GitHub: @nannaphatkn
 
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
