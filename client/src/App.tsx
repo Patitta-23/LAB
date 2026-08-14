@@ -37,14 +37,13 @@ export default function App() {
 
       {state === "success" && (
         <div>
-          <div className="alert alert-success d-inline-block px-3 py-1 mb-3" role="status">
-            <strong>Status:</strong> Online
+          <div className="alert alert-success px-3 py-2 mb-3" role="status">
+            <strong>System Status:</strong> Online
           </div>
-          <h2 className="h5 mb-3">Available Categories</h2>
           <ul className="list-group">
-            {categories.map((cat) => (
+            {categories.map((cat, index) => (
               <li key={cat.id} className="list-group-item">
-                {cat.name}
+                {index + 1}. {cat.name}
               </li>
             ))}
           </ul>
@@ -53,9 +52,9 @@ export default function App() {
 
       {state === "error" && (
         <div className="alert alert-danger" role="alert">
-          <strong>Status:</strong> Offline
+          <strong>System Status:</strong> Offline
           <br />
-          <span className="text-danger-emphasis small">⚠ {errorMessage}</span>
+          <span className="small">⚠ {errorMessage}</span>
           <hr className="my-2" />
           <small className="text-muted">
             Please make sure the server is running at{" "}
