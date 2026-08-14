@@ -27,7 +27,11 @@ export default function App() {
         TokTickIT <span className="text-success">IT Service Desk</span>
       </h1>
 
-      <button className="btn btn-success mb-4" onClick={handleCheck} disabled={state === "loading"}>
+      <button
+        className="btn btn-success mb-4"
+        onClick={handleCheck}
+        disabled={state === "loading"}
+      >
         {state === "loading" ? "Loading…" : "Check System"}
       </button>
 
@@ -49,7 +53,14 @@ export default function App() {
 
       {state === "error" && (
         <div className="alert alert-danger" role="alert">
-          <strong>Status:</strong> Offline ({errorMessage})
+          <strong>Status:</strong> Offline
+          <br />
+          <span className="text-danger-emphasis small">⚠ {errorMessage}</span>
+          <hr className="my-2" />
+          <small className="text-muted">
+            Please make sure the server is running at{" "}
+            <code>http://localhost:3000</code> and the database is connected.
+          </small>
         </div>
       )}
     </div>
