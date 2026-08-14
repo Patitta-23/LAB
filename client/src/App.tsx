@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { checkSystem, Category } from "./api.js";
+import { checkSystem, Category } from "./api";
 
 type UiState = "idle" | "loading" | "success" | "error";
 
