@@ -1,6 +1,22 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
+import * as prismaModule from "../../src/prisma.js";
+
+const mockCategories = [
+  { id: 1, name: "Account and Access" },
+  { id: 2, name: "Hardware" },
+  { id: 3, name: "Software" },
+  { id: 4, name: "Network" },
+];
+
+beforeEach(() => {
+  vi.spyOn(prismaModule, "getPrisma").mockReturnValue({
+    category: {
+      findMany: vi.fn().mockResolvedValue(mockCategories),
+    },
+  } as any);
+});
 
 describe("GET /api/categories", () => {
   it("returns the four seeded categories in id order", async () => {

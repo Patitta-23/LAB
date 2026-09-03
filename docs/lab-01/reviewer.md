@@ -15,5 +15,5 @@ Reviewer comment I received: "Fixing points in 10e4e1c: client/src/api.ts — ch
 How I responded: "Implemented checkSystem(), App UI state handling, and unit tests as requested."
 
 ## Pull Requests I reviewed for my partner
-My comment: Approved after reviewing changes.
-Partner's response: Thank you!
+My comment: Approved after reviewing changes. and issue#3 "เนื้อหาของโค้ดไม่ตรงกับชื่อ Feature/Branch (Feature Mismatch)"
+Partner's response: My partner fixed it and Thank you!
