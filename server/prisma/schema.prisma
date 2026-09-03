@@ -11,14 +11,73 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Issue 3 — Create and seed IT request categories
-// Define a Category model with:
-//   id        Int      @id @default(autoincrement())
-//   name      String   @unique
-//   createdAt DateTime @default(now())
+// Lab 1 — IT request categories (4 seeded: Account and Access, Hardware, Software, Network)
 // ---------------------------------------------------------------------------
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   createdAt DateTime @default(now())
+  tickets   Ticket[]
+}
+
+// ---------------------------------------------------------------------------
+// Lab 2 Feature D — Development Requester Context
+// Simulates authenticated users before real JWT auth (Lab 3).
+// isActive: false  →  excluded from the Dev Requester Selector (BR-11)
+// ---------------------------------------------------------------------------
+model Requester {
+  id         Int        @id @default(autoincrement())
+  name       String
+  email      String     @unique
+  department String
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  tickets    Ticket[]
+}
+
+// ---------------------------------------------------------------------------
+// Lab 2 Feature E/F — Ticket
+// status defaults to OPEN (BR-04). Owned by exactly one Requester (BR-01).
+// ---------------------------------------------------------------------------
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model Ticket {
+  id          Int           @id @default(autoincrement())
+  title       String
+  description String
+  status      TicketStatus  @default(OPEN)
+  categoryId  Int
+  requesterId Int
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  category    Category      @relation(fields: [categoryId], references: [id])
+  requester   Requester     @relation(fields: [requesterId], references: [id])
+  attachments Attachment[]
+}
+
+// ---------------------------------------------------------------------------
+// Lab 2 Feature G — Attachment (soft-delete, BR-08/BR-09)
+// Accepted MIME types: image/jpeg, image/png, image/webp, application/pdf (BR-07)
+// Max 5 per ticket (BR-05), each <= 5 MB (BR-06)
+// Soft-delete: deletedAt set + deleteReason stored; record is never hard-deleted
+// ---------------------------------------------------------------------------
+model Attachment {
+  id           Int       @id @default(autoincrement())
+  ticketId     Int
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  storagePath  String
+  deletedAt    DateTime?
+  deleteReason String?
+  createdAt    DateTime  @default(now())
+
+  ticket       Ticket    @relation(fields: [ticketId], references: [id])
 }
