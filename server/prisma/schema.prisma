@@ -11,14 +11,25 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
-// Issue 3 — Create and seed IT request categories
-// Define a Category model with:
-//   id        Int      @id @default(autoincrement())
-//   name      String   @unique
-//   createdAt DateTime @default(now())
+// Lab 1 — IT request categories (4 seeded: Account and Access, Hardware, Software, Network)
 // ---------------------------------------------------------------------------
 model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Lab 2 Feature D — Development Requester Context
+// Simulates authenticated users before real JWT auth (Lab 3).
+// isActive: false → excluded from the Dev Requester Selector (BR-11)
+// ---------------------------------------------------------------------------
+model Requester {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  department String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
