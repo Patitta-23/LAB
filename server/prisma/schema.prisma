@@ -60,4 +60,23 @@ model Ticket {
 
   category  Category  @relation(fields: [categoryId],  references: [id])
   requester Requester @relation(fields: [requesterId], references: [id])
+  attachments Attachment[]
+}
+
+// ---------------------------------------------------------------------------
+// Lab 2 Feature G — Attachment (soft-delete, BR-08, BR-09)
+// Hard-delete is never used; deletedAt + deleteReason records the removal.
+// ---------------------------------------------------------------------------
+model Attachment {
+  id           Int       @id @default(autoincrement())
+  ticketId     Int
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  storagePath  String
+  deletedAt    DateTime?
+  deleteReason String?
+  createdAt    DateTime  @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id])
 }
