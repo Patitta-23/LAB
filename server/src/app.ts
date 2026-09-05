@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import { getPrisma } from "./prisma.js";
+import { requesterRouter } from "./routes/requesterRoutes.js";
 
 export const app = express();
 
@@ -28,20 +29,8 @@ app.get("/api/categories", async (_req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// Lab 2 Feature D — Development Requester Context
-// GET /api/requesters — returns only ACTIVE requesters (BR-11)
+// Lab 2 Feature D — GET /api/requesters (router extracted per Clean Code review)
 // ---------------------------------------------------------------------------
-app.get("/api/requesters", async (_req: Request, res: Response) => {
-  try {
-    const requesters = await getPrisma().requester.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true, department: true },
-    });
-    res.status(200).json(requesters);
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+app.use("/api/requesters", requesterRouter);
 
 export default app;

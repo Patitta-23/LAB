@@ -58,4 +58,11 @@ describe("GET /api/requesters", () => {
     expect(res.status).toBe(500);
     expect(res.body).toHaveProperty("error");
   });
+
+  it("T-01e: results are sorted alphabetically by name (orderBy: { name: 'asc' })", async () => {
+    await request(app).get("/api/requesters");
+    expect(findManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ orderBy: { name: "asc" } })
+    );
+  });
 });

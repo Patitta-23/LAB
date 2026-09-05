@@ -42,5 +42,10 @@ async function main() {
 
 main()
   .catch((e) => { console.error(e); process.exit(1); })
-  .finally(async () => { await getPrisma().$disconnect(); });
+  .finally(async () => {
+    // Reuse the same prisma instance — do NOT call getPrisma() again
+    // to avoid creating a second connection handle (reviewer Issue 2)
+    const prisma = getPrisma();
+    await prisma.$disconnect();
+  });
 
