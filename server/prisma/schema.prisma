@@ -17,6 +17,7 @@ model Category {
   id        Int      @id @default(autoincrement())
   name      String   @unique
   createdAt DateTime @default(now())
+  tickets   Ticket[]
 }
 
 // ---------------------------------------------------------------------------
@@ -32,4 +33,31 @@ model Requester {
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  tickets    Ticket[]
+}
+
+// ---------------------------------------------------------------------------
+// Lab 2 Feature E — Ticket
+// status defaults to OPEN (BR-04). Owned by exactly one Requester (BR-01).
+// Attachments relation added in Feature G.
+// ---------------------------------------------------------------------------
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model Ticket {
+  id          Int          @id @default(autoincrement())
+  title       String
+  description String
+  status      TicketStatus @default(OPEN)
+  categoryId  Int
+  requesterId Int
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  category  Category  @relation(fields: [categoryId],  references: [id])
+  requester Requester @relation(fields: [requesterId], references: [id])
 }
