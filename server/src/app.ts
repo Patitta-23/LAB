@@ -199,4 +199,95 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Lab 2 Feature G — Attachments (BR-05..BR-09)
+// ---------------------------------------------------------------------------
+
+// POST /api/tickets/:id/attachments — add more files to an existing ticket
+app.post("/api/tickets/:id/attachments", upload.array("attachments", 5), async (req: Request, res: Response) => {
+  const requesterId = getRequesterId(req);
+  if (!requesterId) { res.status(400).json({ error: "Missing or invalid X-Requester-Id header" }); return; }
+
+  const ticketId = parseInt(req.params.id, 10);
+  if (isNaN(ticketId)) { res.status(400).json({ error: "Invalid ticket ID" }); return; }
+
+  try {
+    const ticket = await getPrisma().ticket.findUnique({
+      where: { id: ticketId },
+      include: { attachments: { where: { deletedAt: null } } },
+    });
+    if (!ticket)                          { res.status(404).json({ error: "Ticket not found" }); return; }
+    if (ticket.requesterId !== requesterId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+    const files = (req.files as Express.Multer.File[]) ?? [];
+    const current = ticket.attachments.length;
+    if (current + files.length > 5) {
+      res.status(422).json({ error: "Attachment limit exceeded", details: `Has ${current}, can add at most ${5 - current} more.` });
+      return;
+    }
+
+    const created = await getPrisma().$transaction(
+      files.map((f) => getPrisma().attachment.create({
+        data: { ticketId, filename: f.originalname, mimeType: f.mimetype, sizeBytes: f.size, storagePath: f.path },
+      }))
+    );
+    res.status(201).json(created);
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /api/attachments/:id — soft-delete with mandatory reason >= 10 chars (BR-08, BR-09)
+app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
+  const requesterId = getRequesterId(req);
+  if (!requesterId) { res.status(400).json({ error: "Missing or invalid X-Requester-Id header" }); return; }
+
+  const attachmentId = parseInt(req.params.id, 10);
+  if (isNaN(attachmentId)) { res.status(400).json({ error: "Invalid attachment ID" }); return; }
+
+  const { reason } = req.body;
+  if (!reason || String(reason).trim().length < 10) {
+    res.status(400).json({ error: "Reason must be at least 10 characters" }); return;
+  }
+
+  try {
+    const attachment = await getPrisma().attachment.findUnique({
+      where: { id: attachmentId }, include: { ticket: true },
+    });
+    if (!attachment || attachment.deletedAt) { res.status(404).json({ error: "Attachment not found" }); return; }
+    if (attachment.ticket.requesterId !== requesterId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+    await getPrisma().attachment.update({
+      where: { id: attachmentId },
+      data: { deletedAt: new Date(), deleteReason: String(reason).trim() },
+    });
+    res.status(200).json({ message: "Attachment removed", attachmentId });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/attachments/:id/download — stream file; blocks soft-deleted (BR-09)
+app.get("/api/attachments/:id/download", async (req: Request, res: Response) => {
+  const requesterId = getRequesterId(req);
+  if (!requesterId) { res.status(400).json({ error: "Missing or invalid X-Requester-Id header" }); return; }
+
+  const attachmentId = parseInt(req.params.id, 10);
+  if (isNaN(attachmentId)) { res.status(400).json({ error: "Invalid attachment ID" }); return; }
+
+  try {
+    const attachment = await getPrisma().attachment.findUnique({
+      where: { id: attachmentId }, include: { ticket: true },
+    });
+    if (!attachment || attachment.deletedAt) { res.status(404).json({ error: "Attachment not found" }); return; }
+    if (attachment.ticket.requesterId !== requesterId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+    res.setHeader("Content-Type", attachment.mimeType);
+    res.setHeader("Content-Disposition", `attachment; filename="${attachment.filename}"`);
+    res.sendFile(path.resolve(attachment.storagePath));
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default app;
