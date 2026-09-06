@@ -181,7 +181,10 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
   try {
     const ticket = await getPrisma().ticket.findUnique({
       where: { id: ticketId },
-      include: { category: { select: { id: true, name: true } } },
+      include: {
+        category: { select: { id: true, name: true } },
+        attachments: true,
+      },
     });
 
     if (!ticket) {

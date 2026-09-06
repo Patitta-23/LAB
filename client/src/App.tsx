@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./index.css";
 import { Requester } from "./api";
 import RequesterSelector from "./components/RequesterSelector";
@@ -13,6 +13,24 @@ type Page =
   | { name: "create" }
   | { name: "detail"; ticketId: number };
 
+function getInitialPage(savedRequester: Requester | null): Page {
+  if (!savedRequester) return { name: "select-requester" };
+  const path = window.location.pathname;
+  const matchDetail = path.match(/^\/tickets\/(\d+)$/);
+  if (matchDetail) {
+    return { name: "detail", ticketId: parseInt(matchDetail[1], 10) };
+  }
+  const searchParams = new URLSearchParams(window.location.search);
+  const qTicketId = searchParams.get("ticketId");
+  if (qTicketId && !isNaN(parseInt(qTicketId, 10))) {
+    return { name: "detail", ticketId: parseInt(qTicketId, 10) };
+  }
+  if (path === "/tickets/new") {
+    return { name: "create" };
+  }
+  return { name: "list" };
+}
+
 export default function App() {
   const [requester, setRequester] = useState<Requester | null>(() => {
     try {
@@ -24,9 +42,33 @@ export default function App() {
   });
 
   const [page, setPage] = useState<Page>(() => {
-    const saved = localStorage.getItem("toktickit_requester");
-    return saved ? { name: "list" } : { name: "select-requester" };
+    try {
+      const saved = localStorage.getItem("toktickit_requester");
+      const req = saved ? JSON.parse(saved) : null;
+      return getInitialPage(req);
+    } catch {
+      return { name: "select-requester" };
+    }
   });
+
+  const navigateTo = (newPage: Page) => {
+    setPage(newPage);
+    if (newPage.name === "detail") {
+      window.history.pushState(null, "", `/tickets/${newPage.ticketId}`);
+    } else if (newPage.name === "create") {
+      window.history.pushState(null, "", "/tickets/new");
+    } else if (newPage.name === "list") {
+      window.history.pushState(null, "", "/");
+    }
+  };
+
+  useEffect(() => {
+    const onPop = () => {
+      setPage(getInitialPage(requester));
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [requester]);
 
   const handleSelectRequester = (r: Requester) => {
     setRequester(r);
@@ -35,7 +77,7 @@ export default function App() {
     } catch (err) {
       console.error("Failed to save requester to storage", err);
     }
-    setPage({ name: "list" });
+    navigateTo({ name: "list" });
   };
 
   const handleRequesterChangeFromNavbar = (r: Requester) => {
@@ -61,7 +103,7 @@ export default function App() {
             id="navbar-brand"
             onClick={(e) => {
               e.preventDefault();
-              setPage(requester ? { name: "list" } : { name: "select-requester" });
+              navigateTo(requester ? { name: "list" } : { name: "select-requester" });
             }}
           >
             <div className="navbar-logo" aria-hidden="true">TT</div>
@@ -73,7 +115,7 @@ export default function App() {
             <button
               id="nav-my-tickets"
               className={`nav-link${currentPage === "list" ? " active" : ""}`}
-              onClick={() => setPage({ name: "list" })}
+              onClick={() => navigateTo({ name: "list" })}
               disabled={!requester}
             >
               My Tickets
@@ -81,7 +123,7 @@ export default function App() {
             <button
               id="nav-new-ticket"
               className={`nav-link${currentPage === "create" ? " active" : ""}`}
-              onClick={() => setPage({ name: "create" })}
+              onClick={() => navigateTo({ name: "create" })}
               disabled={!requester}
             >
               + New Ticket
@@ -92,7 +134,7 @@ export default function App() {
           <RequesterSelector
             requester={requester}
             onChange={handleRequesterChangeFromNavbar}
-            onOpenSelectPage={() => setPage({ name: "select-requester" })}
+            onOpenSelectPage={() => navigateTo({ name: "select-requester" })}
           />
         </div>
       </nav>
@@ -105,7 +147,7 @@ export default function App() {
             onSelect={handleSelectRequester}
             onCancel={() => {
               if (requester) {
-                setPage({ name: "list" });
+                navigateTo({ name: "list" });
               }
             }}
           />
@@ -121,16 +163,16 @@ export default function App() {
             {page.name === "list" && (
               <TicketListPage
                 requesterId={requester.id}
-                onSelectTicket={(id) => setPage({ name: "detail", ticketId: id })}
-                onCreateNew={() => setPage({ name: "create" })}
+                onSelectTicket={(id) => navigateTo({ name: "detail", ticketId: id })}
+                onCreateNew={() => navigateTo({ name: "create" })}
               />
             )}
             {page.name === "create" && (
               <CreateTicketPage
                 requester={requester}
                 requesterId={requester.id}
-                onSuccess={(ticketId) => setPage({ name: "detail", ticketId })}
-                onCancel={() => setPage({ name: "list" })}
+                onSuccess={(ticketId) => navigateTo({ name: "detail", ticketId })}
+                onCancel={() => navigateTo({ name: "list" })}
               />
             )}
 
@@ -138,7 +180,7 @@ export default function App() {
               <TicketDetailPage
                 requesterId={requester.id}
                 ticketId={page.ticketId}
-                onBack={() => setPage({ name: "list" })}
+                onBack={() => navigateTo({ name: "list" })}
               />
             )}
           </div>

@@ -246,6 +246,30 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
   }
 
   if (error) {
+    const isForbidden =
+      error.toLowerCase().includes("forbidden") ||
+      error.toLowerCase().includes("access denied") ||
+      error.toLowerCase().includes("403");
+
+    if (isForbidden) {
+      return (
+        <div style={{ maxWidth: 600, margin: "var(--space-8) auto" }}>
+          <div className="card" style={{ textAlign: "center", padding: "var(--space-8) var(--space-6)" }}>
+            <div style={{ fontSize: 52, marginBottom: "var(--space-3)" }}>🚫</div>
+            <h2 id="forbidden-heading" style={{ fontSize: 20, color: "#991b1b", marginBottom: "var(--space-2)" }}>
+              Access Denied (403 Forbidden)
+            </h2>
+            <p style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: "var(--space-5)" }}>
+              You do not have permission to view this ticket. This ticket belongs to another requester.
+            </p>
+            <button id="btn-forbidden-back" className="btn btn-secondary" onClick={onBack}>
+              ← Back to My Tickets
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div>
         <div className="page-header">
@@ -258,7 +282,8 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
 
   if (!ticket) return null;
 
-  const activeAttachments = ticket.attachments?.filter((a) => !a.deletedAt) ?? [];
+  const allAttachments = ticket.attachments ?? [];
+  const activeAttachments = allAttachments.filter((a) => !a.deletedAt);
 
   // Extract Related System & Priority if formatted into description
   const systemMatch = ticket.description.match(/\[Related System:\s*([^\]]+)\]/);
@@ -400,7 +425,7 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
               accept=".pdf,.png,.jpg,.jpeg"
               style={{ display: "none" }}
             />
-            {activeAttachments.length === 0 ? (
+            {allAttachments.length === 0 ? (
               <div className="empty-state" style={{ padding: "var(--space-8) var(--space-4)" }}>
                 <div className="empty-icon">📎</div>
                 <div className="empty-title" style={{ fontSize: 14 }}>No attachments</div>
@@ -425,32 +450,104 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
                 </button>
               </div>
             ) : (
-              activeAttachments.map((att) => (
-                <div key={att.id} className="attachment-card" id={`attachment-card-${att.id}`}>
-                  <div className="attachment-icon">{fileIcon(att.mimeType)}</div>
-                  <div className="attachment-info">
-                    <div className="attachment-name" title={att.filename}>{att.filename}</div>
-                    <div className="attachment-size">{formatBytes(att.sizeBytes)}</div>
+              allAttachments.map((att) => {
+                const isDeleted = Boolean(att.deletedAt);
+                return (
+                  <div
+                    key={att.id}
+                    className={`attachment-card${isDeleted ? " attachment-deleted" : ""}`}
+                    id={`attachment-card-${att.id}`}
+                    style={{
+                      opacity: isDeleted ? 0.75 : 1,
+                      background: isDeleted ? "var(--color-bg-secondary)" : undefined,
+                    }}
+                  >
+                    <div className="attachment-icon">{fileIcon(att.mimeType)}</div>
+                    <div className="attachment-info" style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexWrap: "wrap" }}>
+                        <span
+                          className="attachment-name"
+                          title={att.filename}
+                          style={{
+                            color: isDeleted ? "var(--color-text-secondary)" : "var(--color-text-primary)",
+                            textDecoration: isDeleted ? "line-through" : "none",
+                          }}
+                        >
+                          {att.filename}
+                        </span>
+                        {isDeleted && (
+                          <span
+                            className="badge"
+                            id={`badge-removed-${att.id}`}
+                            style={{
+                              background: "#f3f4f6",
+                              color: "#6b7280",
+                              fontSize: 11,
+                              padding: "2px 8px",
+                              fontWeight: 600,
+                              borderRadius: "var(--radius-full)",
+                            }}
+                          >
+                            Removed
+                          </span>
+                        )}
+                      </div>
+                      <div className="attachment-size" style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                        {formatBytes(att.sizeBytes)}
+                        {isDeleted && att.deleteReason && (
+                          <span style={{ marginLeft: 6, fontStyle: "italic", color: "#6b7280" }}>
+                            • Reason: {att.deleteReason}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="attachment-actions">
+                      {isDeleted ? (
+                        <button
+                          id={`btn-download-${att.id}-disabled`}
+                          className="btn btn-sm"
+                          disabled
+                          style={{
+                            background: "#e5e7eb",
+                            color: "#9ca3af",
+                            cursor: "not-allowed",
+                            border: "none",
+                            fontWeight: 500,
+                          }}
+                          title="This file was removed and cannot be downloaded"
+                        >
+                          ↓ Download
+                        </button>
+                      ) : (
+                        <>
+                          <a
+                            id={`btn-download-${att.id}`}
+                            href={getDownloadUrl(att.id)}
+                            className="btn btn-sm"
+                            style={{
+                              background: "var(--color-primary)",
+                              color: "white",
+                              textDecoration: "none",
+                              fontWeight: 600,
+                              border: "none",
+                            }}
+                            download={att.filename}
+                          >
+                            ↓ Download
+                          </a>
+                          <button
+                            id={`btn-remove-${att.id}`}
+                            className="btn btn-danger btn-sm"
+                            onClick={() => setRemoving(att)}
+                          >
+                            Remove
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="attachment-actions">
-                    <a
-                      id={`btn-download-${att.id}`}
-                      href={getDownloadUrl(att.id)}
-                      className="btn btn-secondary btn-sm"
-                      download={att.filename}
-                    >
-                      ↓ Download
-                    </a>
-                    <button
-                      id={`btn-remove-${att.id}`}
-                      className="btn btn-danger btn-sm"
-                      onClick={() => setRemoving(att)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
