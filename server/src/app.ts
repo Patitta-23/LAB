@@ -106,4 +106,97 @@ app.post("/api/tickets", upload.array("attachments", 5), async (req: Request, re
   }
 });
 
+// ---------------------------------------------------------------------------
+// Lab 2 Feature F — My Tickets (BR-02, BR-10)
+// GET /api/tickets — list requester's own tickets with search/filter/sort/paginate
+// ---------------------------------------------------------------------------
+app.get("/api/tickets", async (req: Request, res: Response) => {
+  const requesterId = getRequesterId(req);
+  if (!requesterId) {
+    res.status(400).json({ error: "Missing or invalid X-Requester-Id header" });
+    return;
+  }
+
+  const { search, status, categoryId, sortBy, sortOrder, page, limit } = req.query;
+
+  const pageNum  = Math.max(1, parseInt(String(page  ?? "1"),  10) || 1);
+  const limitNum = Math.min(100, Math.max(1, parseInt(String(limit ?? "10"), 10) || 10));
+  const skip = (pageNum - 1) * limitNum;
+  const orderField = sortBy === "updatedAt" ? "updatedAt" : "createdAt";
+  const orderDir   = sortOrder === "asc" ? "asc" : "desc";
+
+  const where: Record<string, unknown> = { requesterId };
+  if (status)     where["status"]     = status;
+  if (categoryId && !isNaN(parseInt(String(categoryId))))
+    where["categoryId"] = parseInt(String(categoryId));
+  if (search) {
+    where["OR"] = [
+      { title:       { contains: String(search), mode: "insensitive" } },
+      { description: { contains: String(search), mode: "insensitive" } },
+    ];
+  }
+
+  try {
+    const [data, total] = await Promise.all([
+      getPrisma().ticket.findMany({
+        where,
+        orderBy: { [orderField]: orderDir },
+        skip,
+        take: limitNum,
+        select: {
+          id: true, title: true, status: true,
+          createdAt: true, updatedAt: true,
+          category: { select: { id: true, name: true } },
+        },
+      }),
+      getPrisma().ticket.count({ where }),
+    ]);
+
+    res.status(200).json({
+      data,
+      total,
+      page:       pageNum,
+      limit:      limitNum,
+      totalPages: Math.ceil(total / limitNum),
+    });
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/tickets/:id — ticket detail (requester-scoped, BR-02)
+app.get("/api/tickets/:id", async (req: Request, res: Response) => {
+  const requesterId = getRequesterId(req);
+  if (!requesterId) {
+    res.status(400).json({ error: "Missing or invalid X-Requester-Id header" });
+    return;
+  }
+
+  const ticketId = parseInt(req.params.id, 10);
+  if (isNaN(ticketId)) {
+    res.status(400).json({ error: "Invalid ticket ID" });
+    return;
+  }
+
+  try {
+    const ticket = await getPrisma().ticket.findUnique({
+      where: { id: ticketId },
+      include: { category: { select: { id: true, name: true } } },
+    });
+
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found" });
+      return;
+    }
+    if (ticket.requesterId !== requesterId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    res.status(200).json(ticket);
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default app;
