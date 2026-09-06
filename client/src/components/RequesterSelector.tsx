@@ -18,6 +18,7 @@ export default function RequesterSelector({ requester, onChange }: Props) {
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,7 +27,13 @@ export default function RequesterSelector({ requester, onChange }: Props) {
         setRequesters(data);
         if (!requester && data.length > 0) onChange(data[0]);
       })
-      .catch(console.error)
+      .catch(() => {
+        setFetchError(true);
+        // Fallback: still allow app to render with a placeholder
+        if (!requester) {
+          onChange({ id: 0, name: "Guest", email: "", department: "N/A" });
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -46,6 +53,19 @@ export default function RequesterSelector({ requester, onChange }: Props) {
       <div className="requester-btn" style={{ opacity: 0.6, cursor: "default" }}>
         <div className="skeleton" style={{ width: 26, height: 26, borderRadius: "50%" }} />
         <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>Loading…</span>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div
+        className="requester-btn"
+        title="Cannot reach the server. Make sure Docker is running."
+        style={{ background: "var(--color-error-pale)", borderColor: "var(--color-error)", cursor: "default" }}
+      >
+        <span style={{ fontSize: 15 }}>⚠</span>
+        <span style={{ fontSize: 13, color: "var(--color-error)" }}>Server offline</span>
       </div>
     );
   }
