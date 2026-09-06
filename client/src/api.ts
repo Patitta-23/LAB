@@ -1,9 +1,11 @@
 // -----------------------------------------------------------------------
 // TokTickIT API Client — Lab 2
-// Covers: Requesters, Tickets, Attachments
+// All /api/* calls go through Vite proxy → http://localhost:3000
 // -----------------------------------------------------------------------
+
+// For server-side absolute URLs only (e.g. download links in <a href>)
 const rawUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
-const API_URL = rawUrl.replace(/["']/g, "").replace(/\/+$/, "");
+const API_BASE = rawUrl.replace(/["']/g, "").replace(/\/+$/, "");
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -79,7 +81,8 @@ async function apiFetch<T>(
   requesterId: number,
   options: RequestInit = {}
 ): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  // Use relative path to go through Vite proxy — avoids CORS
+  const res = await fetch(path, {
     ...options,
     headers: {
       "X-Requester-Id": String(requesterId),
@@ -98,7 +101,7 @@ async function apiFetch<T>(
 export async function checkSystem(): Promise<SystemStatus> {
   let healthRes: Response;
   try {
-    healthRes = await fetch(`${API_URL}/api/health`);
+    healthRes = await fetch("/api/health");
   } catch {
     throw new Error("Cannot connect to the server. Please make sure the server is running.");
   }
@@ -107,7 +110,7 @@ export async function checkSystem(): Promise<SystemStatus> {
     throw new Error(`Server responded with status ${healthRes.status}.`);
   }
 
-  const categoriesRes = await fetch(`${API_URL}/api/categories`);
+  const categoriesRes = await fetch("/api/categories");
   if (!categoriesRes.ok) {
     throw new Error(`Categories fetch failed with status ${categoriesRes.status}.`);
   }
@@ -119,13 +122,13 @@ export async function checkSystem(): Promise<SystemStatus> {
 // ── Feature D — Requesters ─────────────────────────────────────────────
 
 export async function fetchRequesters(): Promise<Requester[]> {
-  const res = await fetch(`${API_URL}/api/requesters`);
+  const res = await fetch("/api/requesters");
   if (!res.ok) throw new Error(`Failed to fetch requesters: HTTP ${res.status}`);
   return res.json();
 }
 
 export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch(`${API_URL}/api/categories`);
+  const res = await fetch("/api/categories");
   if (!res.ok) throw new Error(`Failed to fetch categories: HTTP ${res.status}`);
   return res.json();
 }
@@ -136,7 +139,7 @@ export async function createTicket(
   requesterId: number,
   data: FormData
 ): Promise<Ticket> {
-  const res = await fetch(`${API_URL}/api/tickets`, {
+  const res = await fetch("/api/tickets", {
     method: "POST",
     headers: { "X-Requester-Id": String(requesterId) },
     body: data,
@@ -185,7 +188,7 @@ export async function uploadAttachments(
 ): Promise<Attachment[]> {
   const fd = new FormData();
   files.forEach((f) => fd.append("attachments", f));
-  const res = await fetch(`${API_URL}/api/tickets/${ticketId}/attachments`, {
+  const res = await fetch(`/api/tickets/${ticketId}/attachments`, {
     method: "POST",
     headers: { "X-Requester-Id": String(requesterId) },
     body: fd,
@@ -210,5 +213,5 @@ export async function deleteAttachment(
 }
 
 export function getDownloadUrl(attachmentId: number): string {
-  return `${API_URL}/api/attachments/${attachmentId}/download`;
+  return `${API_BASE}/api/attachments/${attachmentId}/download`;
 }
