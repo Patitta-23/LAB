@@ -505,7 +505,8 @@ select.form-control {
   white-space: nowrap;
 }
 
-.badge-OPEN         { background: #D8F3DC; color: #1B4332; }
+.badge-OPEN,
+.badge-NEW          { background: #D8F3DC; color: #1B4332; }
 .badge-IN_PROGRESS  { background: #FEF3C7; color: #92400E; }
 .badge-RESOLVED     { background: #DBEAFE; color: #1E40AF; }
 .badge-CLOSED       { background: #F3F4F6; color: #6B7280; }

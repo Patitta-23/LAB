@@ -37,8 +37,15 @@ export interface Ticket {
   requesterId: number;
   createdAt: string;
   updatedAt: string;
-  category: { id: number; name: string };
+  category: Category;
+  _count?: { attachments: number };
 }
+
+export function formatTicketNumber(id: number, createdAt?: string): string {
+  const year = createdAt ? new Date(createdAt).getFullYear() : 2026;
+  return `TKT-${year}-${String(id).padStart(6, "0")}`;
+}
+
 
 export interface Attachment {
   id: number;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Ticket, TicketListParams, TicketStatus, Category, fetchTickets, fetchCategories } from "../api";
+import { Ticket, TicketListParams, TicketStatus, Category, fetchTickets, fetchCategories, formatTicketNumber } from "../api";
 
 interface Props {
   requesterId: number;
@@ -9,7 +9,7 @@ interface Props {
 
 const STATUS_OPTIONS: { value: TicketStatus | ""; label: string }[] = [
   { value: "", label: "All Statuses" },
-  { value: "OPEN",        label: "Open" },
+  { value: "OPEN",        label: "New" },
   { value: "IN_PROGRESS", label: "In Progress" },
   { value: "RESOLVED",    label: "Resolved" },
   { value: "CLOSED",      label: "Closed" },
@@ -17,7 +17,7 @@ const STATUS_OPTIONS: { value: TicketStatus | ""; label: string }[] = [
 
 function StatusBadge({ status }: { status: TicketStatus }) {
   const labels: Record<TicketStatus, string> = {
-    OPEN: "Open", IN_PROGRESS: "In Progress", RESOLVED: "Resolved", CLOSED: "Closed",
+    OPEN: "New", IN_PROGRESS: "In Progress", RESOLVED: "Resolved", CLOSED: "Closed",
   };
   return <span className={`badge badge-${status}`}>{labels[status]}</span>;
 }
@@ -158,7 +158,7 @@ export default function TicketListPage({ requesterId, onSelectTicket, onCreateNe
           <table>
             <thead>
               <tr>
-                <th className="td-id">#</th>
+                <th className="td-id" style={{ width: 140 }}>Ticket #</th>
                 <th>Title</th>
                 <th>Category</th>
                 <th>Status</th>
@@ -220,7 +220,9 @@ export default function TicketListPage({ requesterId, onSelectTicket, onCreateNe
                     tabIndex={0}
                     onKeyDown={(e) => e.key === "Enter" && onSelectTicket(t.id)}
                   >
-                    <td className="td-id">{t.id}</td>
+                    <td className="td-id" style={{ fontFamily: "monospace", fontSize: 12, whiteSpace: "nowrap" }}>
+                      {(t as any).ticketNumber || formatTicketNumber(t.id, t.createdAt)}
+                    </td>
                     <td className="td-title">
                       <span className="td-title-text">{t.title}</span>
                     </td>

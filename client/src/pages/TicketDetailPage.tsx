@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   TicketDetail, Attachment, TicketStatus,
-  fetchTicketById, deleteAttachment, getDownloadUrl
+  fetchTicketById, deleteAttachment, getDownloadUrl, uploadAttachments, formatTicketNumber
 } from "../api";
 
 interface Props {
@@ -11,8 +11,12 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
-  OPEN: "Open", IN_PROGRESS: "In Progress", RESOLVED: "Resolved", CLOSED: "Closed",
+  OPEN: "New", IN_PROGRESS: "In Progress", RESOLVED: "Resolved", CLOSED: "Closed",
 };
+
+const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILES = 5;
 
 function StatusBadge({ status }: { status: TicketStatus }) {
   return <span className={`badge badge-${status}`}>{STATUS_LABELS[status]}</span>;
@@ -127,6 +131,9 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
   const [error,    setError]    = useState("");
   const [removing, setRemoving] = useState<Attachment | null>(null);
   const [successMsg, setSuccessMsg] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     load();
@@ -152,6 +159,61 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
     setSuccessMsg(`Attachment "${removing.filename}" removed.`);
     setTimeout(() => setSuccessMsg(""), 4000);
     await load();
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0 || !ticket) return;
+
+    setUploadError("");
+    const incoming = Array.from(fileList);
+    const activeCount = ticket.attachments?.filter((a) => !a.deletedAt).length ?? 0;
+    const remainingSlots = MAX_FILES - activeCount;
+
+    if (remainingSlots <= 0) {
+      setUploadError(`Maximum limit of ${MAX_FILES} attachments reached.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    const validFiles: File[] = [];
+    const errs: string[] = [];
+
+    for (const f of incoming) {
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        errs.push(`"${f.name}" is not an allowed file type (allowed: PDF, PNG, JPG).`);
+        continue;
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        errs.push(`"${f.name}" exceeds 5 MB limit.`);
+        continue;
+      }
+      validFiles.push(f);
+    }
+
+    if (validFiles.length > remainingSlots) {
+      errs.push(`You can only add up to ${remainingSlots} more file(s).`);
+      validFiles.splice(remainingSlots);
+    }
+
+    if (validFiles.length === 0) {
+      if (errs.length > 0) setUploadError(errs.join(" "));
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await uploadAttachments(requesterId, ticket.id, validFiles);
+      setSuccessMsg(`Successfully uploaded ${validFiles.length} file(s).`);
+      setTimeout(() => setSuccessMsg(""), 4000);
+      await load();
+    } catch (err: any) {
+      setUploadError(err.message ?? "Failed to upload attachments.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   if (loading) {
@@ -225,8 +287,8 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
           <h1 style={{ fontSize: 22, maxWidth: 700 }}>{ticket.title}</h1>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", marginTop: "var(--space-2)" }}>
             <StatusBadge status={ticket.status} />
-            <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-              Ticket #{ticket.id}
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-secondary)", fontFamily: "monospace" }}>
+              {(ticket as any).ticketNumber || formatTicketNumber(ticket.id, ticket.createdAt)}
             </span>
             <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
               {ticket.category.name}
@@ -293,22 +355,74 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
 
         {/* Right — Attachments */}
         <div className="card">
-          <div className="card-header">
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)" }}>
-              Attachments
-            </h2>
-            <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-              {activeAttachments.length} file{activeAttachments.length !== 1 ? "s" : ""}
-            </span>
+          <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>
+                Attachments
+              </h2>
+              <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                {activeAttachments.length} / {MAX_FILES} files
+              </span>
+            </div>
+            {activeAttachments.length < MAX_FILES && (
+              <button
+                id="btn-add-attachment"
+                className="btn btn-secondary btn-sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              >
+                {uploading ? (
+                  <>
+                    <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                    <span>Uploading…</span>
+                  </>
+                ) : (
+                  <>
+                    <span>+</span>
+                    <span>Add Attachment</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
+          {uploadError && (
+            <div className="alert alert-error" style={{ margin: "var(--space-3) var(--space-4)" }}>
+              ⚠ {uploadError}
+            </div>
+          )}
           <div className="card-body">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              multiple
+              accept=".pdf,.png,.jpg,.jpeg"
+              style={{ display: "none" }}
+            />
             {activeAttachments.length === 0 ? (
               <div className="empty-state" style={{ padding: "var(--space-8) var(--space-4)" }}>
                 <div className="empty-icon">📎</div>
                 <div className="empty-title" style={{ fontSize: 14 }}>No attachments</div>
-                <div className="empty-desc" style={{ fontSize: 13 }}>
+                <div className="empty-desc" style={{ fontSize: 13, marginBottom: "var(--space-3)" }}>
                   No files were attached to this ticket.
                 </div>
+                <button
+                  id="btn-empty-add-attachment"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  {uploading ? (
+                    <>
+                      <span className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                      <span>Uploading…</span>
+                    </>
+                  ) : (
+                    <span>+ Add Attachment</span>
+                  )}
+                </button>
               </div>
             ) : (
               activeAttachments.map((att) => (
