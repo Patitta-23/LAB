@@ -23,7 +23,7 @@ function StatusBadge({ status }: { status: TicketStatus }) {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("th-TH", {
+  return new Date(iso).toLocaleDateString("en-US", {
     year: "numeric", month: "short", day: "numeric",
   });
 }

@@ -35,9 +35,9 @@ function formatBytes(bytes: number): string {
 }
 
 function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("th-TH", {
-    year: "numeric", month: "short", day: "numeric",
-    hour: "2-digit", minute: "2-digit",
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
   });
 }
 
