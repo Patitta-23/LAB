@@ -126,10 +126,26 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
           <h1>New Ticket</h1>
           <p>Describe your IT issue and our team will help you out</p>
         </div>
-        <button id="btn-cancel-create" className="btn btn-ghost" onClick={onCancel}>
-          ← Back
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            id="btn-preview-busy"
+            className="btn btn-sm"
+            style={{ fontSize: "11px", padding: "4px 10px", background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", borderRadius: "4px", cursor: "pointer" }}
+            onClick={() => {
+              setSubmitting(true);
+              setTimeout(() => setSubmitting(false), 5000);
+            }}
+            title="Preview busy submitting state for report screenshot"
+          >
+            Preview Busy (5s)
+          </button>
+          <button id="btn-cancel-create" className="btn btn-ghost" onClick={onCancel} disabled={submitting}>
+            ← Back
+          </button>
+        </div>
       </div>
+
 
       <form id="create-ticket-form" onSubmit={handleSubmit} noValidate>
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-6)", maxWidth: 760 }}>
@@ -351,7 +367,7 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
           </div>
 
           {/* Submit */}
-          <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end", alignItems: "center" }}>
             <button
               type="button"
               id="btn-cancel-submit"
@@ -366,10 +382,32 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
               id="btn-submit-ticket"
               className="btn btn-primary btn-lg"
               disabled={submitting}
+              aria-busy={submitting}
+              style={{ minWidth: 160, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}
             >
-              {submitting ? "Submitting…" : "Submit Ticket"}
+              {submitting ? (
+                <>
+                  <span
+                    className="loading-spinner"
+                    aria-hidden="true"
+                    style={{
+                      width: 16,
+                      height: 16,
+                      border: "2px solid rgba(255, 255, 255, 0.35)",
+                      borderTopColor: "#ffffff",
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      animation: "spin 0.8s linear infinite",
+                    }}
+                  />
+                  <span>Submitting…</span>
+                </>
+              ) : (
+                "Submit Ticket"
+              )}
             </button>
           </div>
+
         </div>
       </form>
     </div>
