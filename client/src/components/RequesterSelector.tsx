@@ -72,7 +72,7 @@ export default function RequesterSelector({ requester, onChange, onOpenSelectPag
   }
 
   return (
-    <div className="requester-selector" ref={ref}>
+    <div className="requester-selector" ref={ref} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
       <button
         id="requester-selector-btn"
         className="requester-btn"
@@ -86,6 +86,19 @@ export default function RequesterSelector({ requester, onChange, onOpenSelectPag
         <span>{requester?.name ?? "Select Requester"}</span>
         <span className={`requester-chevron${open ? " open" : ""}`}>▼</span>
       </button>
+
+      {onOpenSelectPage && (
+        <button
+          type="button"
+          id="nav-change-requester-btn"
+          className="btn-change-requester"
+          onClick={onOpenSelectPage}
+          title="Change Development Requester"
+        >
+          ⇄ Change Requester
+        </button>
+      )}
+
 
       {open && (
         <div className="requester-dropdown" role="listbox" aria-label="Select Requester">

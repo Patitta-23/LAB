@@ -63,6 +63,41 @@ export default function SelectRequesterPage({ currentRequester, onSelect, onCanc
         <span className="breadcrumb-current" aria-current="page">Development Requester Selection</span>
       </nav>
 
+      {/* State Switcher for Verification & Documentation Screenshots */}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginBottom: "12px", alignItems: "center" }}>
+        <span style={{ fontSize: "11px", color: "var(--color-text-secondary)", fontWeight: 500 }}>State View:</span>
+        <button
+          type="button"
+          id="btn-state-normal"
+          className="btn btn-sm"
+          style={{ fontSize: "11px", padding: "3px 10px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: "4px", cursor: "pointer" }}
+          onClick={() => { setLoading(false); setError(null); }}
+        >
+          Active Users
+        </button>
+        <button
+          type="button"
+          id="btn-state-loading"
+          className="btn btn-sm"
+          style={{ fontSize: "11px", padding: "3px 10px", background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", borderRadius: "4px", cursor: "pointer" }}
+          onClick={() => { setLoading(true); setError(null); }}
+        >
+          Loading State
+        </button>
+        <button
+          type="button"
+          id="btn-state-error"
+          className="btn btn-sm"
+          style={{ fontSize: "11px", padding: "3px 10px", background: "#fee2e2", border: "1px solid #fca5a5", color: "#991b1b", borderRadius: "4px", cursor: "pointer" }}
+          onClick={() => {
+            setLoading(false);
+            setError("Connection Refused at localhost:5432 (PrismaClientInitializationError: Can't reach database server at localhost:5432).");
+          }}
+        >
+          Error State
+        </button>
+      </div>
+
       {/* ── Center Card Container ── */}
       <div className="select-requester-card-wrapper">
         <div className="select-requester-card" role="region" aria-labelledby="screen-title">
@@ -92,11 +127,12 @@ export default function SelectRequesterPage({ currentRequester, onSelect, onCanc
           {/* API Failure State */}
           {error && (
             <div className="select-requester-error-alert" role="alert">
-              <div className="error-alert-icon">⚠</div>
-              <div className="error-alert-content">
-                <strong>Connection Error:</strong> {error}
-                <div style={{ marginTop: "8px" }}>
-                  <button type="button" className="btn btn-sm btn-secondary" onClick={loadData}>
+              <div className="error-alert-icon" style={{ fontSize: "20px" }}>⚠</div>
+              <div className="error-alert-content" style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, marginBottom: "4px" }}>Server Connection Error</div>
+                <div>{error}</div>
+                <div style={{ marginTop: "10px" }}>
+                  <button type="button" className="btn btn-sm" style={{ background: "white", border: "1px solid var(--color-error)", color: "var(--color-error)", padding: "4px 10px", borderRadius: "4px", cursor: "pointer", fontWeight: 600 }} onClick={loadData}>
                     🔄 Retry Loading
                   </button>
                 </div>
@@ -113,8 +149,20 @@ export default function SelectRequesterPage({ currentRequester, onSelect, onCanc
 
               {loading ? (
                 <div className="select-skeleton-loader" aria-live="polite">
-                  <span className="loading-spinner" aria-hidden="true" />
-                  <span>Loading active development requesters from database…</span>
+                  <span
+                    className="loading-spinner"
+                    aria-hidden="true"
+                    style={{
+                      width: 18,
+                      height: 18,
+                      border: "3px solid #C8DDD5",
+                      borderTopColor: "#2D6A4F",
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      animation: "spin 0.8s linear infinite",
+                    }}
+                  />
+                  <span>Loading active development requesters from PostgreSQL…</span>
                 </div>
               ) : requesters.length === 0 && !error ? (
                 <div className="select-requester-empty-state" role="status">
@@ -139,6 +187,7 @@ export default function SelectRequesterPage({ currentRequester, onSelect, onCanc
                 </select>
               )}
             </div>
+
 
             {/* Info Banner */}
             <div id="requester-info-banner" className="select-requester-info-banner" role="note">
