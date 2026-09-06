@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Category, fetchCategories, createTicket } from "../api";
+import { Category, fetchCategories, createTicket, Requester } from "../api";
 
 interface Props {
   requester?: Requester | null;
@@ -49,6 +49,7 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
   const [globalError, setGlobalError] = useState("");
   const [attachmentError, setAttachmentError] = useState("");
   const [dragOver,    setDragOver]    = useState(false);
+  const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -418,7 +419,7 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
                       <button
                         type="button"
                         className="file-chip-remove"
-                        onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                        onClick={() => setConfirmRemoveIndex(i)}
                         aria-label={`Remove ${f.name}`}
                         id={`btn-remove-file-${i}`}
                       >
@@ -475,6 +476,95 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
 
         </div>
       </form>
+
+      {/* ── Confirm Remove Modal ─────────────────────────────────── */}
+      {confirmRemoveIndex !== null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-remove-title"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "var(--space-4)",
+          }}
+        >
+          {/* Backdrop */}
+          <div
+            onClick={() => setConfirmRemoveIndex(null)}
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.45)",
+              backdropFilter: "blur(4px)",
+            }}
+          />
+          {/* Dialog box */}
+          <div
+            style={{
+              position: "relative",
+              background: "var(--color-surface)",
+              borderRadius: "var(--radius-xl)",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+              padding: "var(--space-8)",
+              maxWidth: 400,
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--space-5)",
+              animation: "modalIn 0.18s ease",
+            }}
+          >
+            {/* Icon */}
+            <div style={{ textAlign: "center", fontSize: 40 }}>🗑️</div>
+
+            {/* Title */}
+            <div style={{ textAlign: "center" }}>
+              <h2
+                id="confirm-remove-title"
+                style={{ fontSize: 18, fontWeight: 700, color: "var(--color-text-primary)", margin: "0 0 var(--space-2)" }}
+              >
+                Remove Attachment?
+              </h2>
+              <p style={{ fontSize: 14, color: "var(--color-text-secondary)", margin: 0 }}>
+                Are you sure you want to remove&nbsp;
+                <strong style={{ color: "var(--color-text-primary)" }}>
+                  {files[confirmRemoveIndex]?.name}
+                </strong>?
+                <br />This cannot be undone.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "var(--space-3)", justifyContent: "flex-end" }}>
+              <button
+                id="btn-confirm-remove-cancel"
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setConfirmRemoveIndex(null)}
+              >
+                Cancel
+              </button>
+              <button
+                id="btn-confirm-remove-confirm"
+                type="button"
+                className="btn btn-danger"
+                onClick={() => {
+                  setFiles((prev) => prev.filter((_, j) => j !== confirmRemoveIndex));
+                  setConfirmRemoveIndex(null);
+                }}
+              >
+                Confirm Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
