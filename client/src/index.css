@@ -993,6 +993,39 @@ tbody td {
   border-color: var(--color-primary);
 }
 
+.form-control-readonly {
+  background-color: #F1F5F3 !important;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  cursor: default;
+  font-weight: 500;
+}
+
+.badge-priority-Low {
+  background: #E8F5E9;
+  color: #2E7D32;
+  border: 1px solid #C8E6C9;
+}
+
+.badge-priority-Medium {
+  background: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.badge-priority-High {
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1px solid #FECACA;
+}
+
+.badge-priority-Urgent {
+  background: #FDF2F8;
+  color: #BE185D;
+  border: 1px solid #FBCFE8;
+}
+
+
 
 .breadcrumb-nav {
   display: flex;

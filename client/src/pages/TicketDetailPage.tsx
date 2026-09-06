@@ -198,6 +198,17 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
 
   const activeAttachments = ticket.attachments?.filter((a) => !a.deletedAt) ?? [];
 
+  // Extract Related System & Priority if formatted into description
+  const systemMatch = ticket.description.match(/\[Related System:\s*([^\]]+)\]/);
+  const priorityMatch = ticket.description.match(/\[Priority:\s*([^\]]+)\]/);
+  const cleanDescription = ticket.description
+    .replace(/\[Related System:\s*[^\]]+\]\s*/g, "")
+    .replace(/\[Priority:\s*[^\]]+\]\s*/g, "")
+    .trim();
+
+  const relatedSystem = systemMatch ? systemMatch[1] : "Corporate Laptop";
+  const requestedPriority = priorityMatch ? priorityMatch[1] : "Medium";
+
   return (
     <div>
       {/* Header */}
@@ -237,19 +248,33 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
           <div className="card-body">
             <p className="detail-section-title">Ticket Information</p>
 
-            <div className="detail-field">
-              <span className="detail-field-label">Category</span>
-              <span className="detail-field-value">{ticket.category.name}</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+              <div className="detail-field" style={{ marginBottom: 0 }}>
+                <span className="detail-field-label">Category</span>
+                <span className="detail-field-value">{ticket.category.name}</span>
+              </div>
+              <div className="detail-field" style={{ marginBottom: 0 }}>
+                <span className="detail-field-label">Related System</span>
+                <span className="detail-field-value">{relatedSystem}</span>
+              </div>
             </div>
 
-            <div className="detail-field">
-              <span className="detail-field-label">Status</span>
-              <span className="detail-field-value"><StatusBadge status={ticket.status} /></span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+              <div className="detail-field" style={{ marginBottom: 0 }}>
+                <span className="detail-field-label">Status</span>
+                <span className="detail-field-value"><StatusBadge status={ticket.status} /></span>
+              </div>
+              <div className="detail-field" style={{ marginBottom: 0 }}>
+                <span className="detail-field-label">Requested Priority</span>
+                <span className="detail-field-value">
+                  <span className={`badge badge-priority-${requestedPriority}`}>{requestedPriority}</span>
+                </span>
+              </div>
             </div>
 
             <div className="detail-field">
               <span className="detail-field-label">Description</span>
-              <span className="detail-field-value" style={{ whiteSpace: "pre-wrap" }}>{ticket.description}</span>
+              <span className="detail-field-value" style={{ whiteSpace: "pre-wrap" }}>{cleanDescription || ticket.description}</span>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-5)" }}>
@@ -264,6 +289,7 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
             </div>
           </div>
         </div>
+
 
         {/* Right — Attachments */}
         <div className="card">

@@ -127,11 +127,13 @@ export default function App() {
             )}
             {page.name === "create" && (
               <CreateTicketPage
+                requester={requester}
                 requesterId={requester.id}
                 onSuccess={(ticketId) => setPage({ name: "detail", ticketId })}
                 onCancel={() => setPage({ name: "list" })}
               />
             )}
+
             {page.name === "detail" && (
               <TicketDetailPage
                 requesterId={requester.id}

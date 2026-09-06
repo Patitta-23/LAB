@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Category, fetchCategories, createTicket } from "../api";
 
 interface Props {
+  requester?: Requester | null;
   requesterId: number;
   onSuccess: (ticketId: number) => void;
   onCancel: () => void;
@@ -10,6 +11,18 @@ interface Props {
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+
+const RELATED_SYSTEMS = [
+  "Corporate Laptop",
+  "Campus Wi-Fi",
+  "VPN",
+  "Email",
+  "LEB2 App",
+  "Grade Submission App",
+  "Printer",
+];
+
+const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
 function fileIcon(mime: string): string {
   if (mime === "application/pdf") return "📄";
@@ -23,10 +36,12 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
 }
 
-export default function CreateTicketPage({ requesterId, onSuccess, onCancel }: Props) {
+export default function CreateTicketPage({ requester, requesterId, onSuccess, onCancel }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [title,       setTitle]       = useState("");
   const [categoryId,  setCategoryId]  = useState("");
+  const [relatedSystem, setRelatedSystem] = useState("Corporate Laptop");
+  const [priority,      setPriority]      = useState("Medium");
   const [description, setDescription] = useState("");
   const [files,       setFiles]       = useState<File[]>([]);
   const [errors,      setErrors]      = useState<Record<string, string>>({});
@@ -86,8 +101,12 @@ export default function CreateTicketPage({ requesterId, onSuccess, onCancel }: P
     try {
       const fd = new FormData();
       fd.append("title",       title.trim());
-      fd.append("description", description.trim());
+      // Prepend metadata tags so Ticket Detail can preserve Related System & Requested Priority
+      const formattedDescription = `[Related System: ${relatedSystem}] [Priority: ${priority}]\n\n${description.trim()}`;
+      fd.append("description", formattedDescription);
       fd.append("categoryId",  categoryId);
+      fd.append("relatedSystem", relatedSystem);
+      fd.append("requestedPriority", priority);
       files.forEach((f) => fd.append("attachments", f));
 
       const ticket = await createTicket(requesterId, fd);
@@ -113,7 +132,7 @@ export default function CreateTicketPage({ requesterId, onSuccess, onCancel }: P
       </div>
 
       <form id="create-ticket-form" onSubmit={handleSubmit} noValidate>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-6)", maxWidth: 680 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "var(--space-6)", maxWidth: 760 }}>
 
           {/* Global Error */}
           {globalError && (
@@ -130,10 +149,45 @@ export default function CreateTicketPage({ requesterId, onSuccess, onCancel }: P
               </h2>
             </div>
             <div className="card-body">
+
+              {/* Row 1: Read-Only System Context (Requester & Date) */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+                {/* Requester */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="input-requester">
+                    Requester (Auto-populated)
+                  </label>
+                  <input
+                    id="input-requester"
+                    className="form-control form-control-readonly"
+                    type="text"
+                    value={requester ? `${requester.name} (${requester.department})` : "Current Requester"}
+                    readOnly
+                    disabled
+                    title="Populated from the Development Requester selected before entering the application"
+                  />
+                </div>
+
+                {/* Ticket Date */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="input-ticket-date">
+                    Ticket Date
+                  </label>
+                  <input
+                    id="input-ticket-date"
+                    className="form-control form-control-readonly"
+                    type="text"
+                    value={new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    readOnly
+                    disabled
+                  />
+                </div>
+              </div>
+
               {/* Title */}
               <div className="form-group">
                 <label className="form-label" htmlFor="input-title">
-                  Title <span className="required">*</span>
+                  Title (Summary) <span className="required">*</span>
                 </label>
                 <input
                   id="input-title"
@@ -147,24 +201,63 @@ export default function CreateTicketPage({ requesterId, onSuccess, onCancel }: P
                 {errors.title && <span className="form-error">⚠ {errors.title}</span>}
               </div>
 
-              {/* Category */}
-              <div className="form-group">
-                <label className="form-label" htmlFor="select-category">
-                  Category <span className="required">*</span>
-                </label>
-                <select
-                  id="select-category"
-                  className={`form-control${errors.categoryId ? " error" : ""}`}
-                  value={categoryId}
-                  onChange={(e) => { setCategoryId(e.target.value); setErrors((prev) => ({ ...prev, categoryId: "" })); }}
-                  disabled={submitting}
-                >
-                  <option value="">Select a category…</option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                {errors.categoryId && <span className="form-error">⚠ {errors.categoryId}</span>}
+              {/* Row 2: Category, Related System, Requested Priority */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-4)" }}>
+                {/* Category */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="select-category">
+                    Category <span className="required">*</span>
+                  </label>
+                  <select
+                    id="select-category"
+                    className={`form-control${errors.categoryId ? " error" : ""}`}
+                    value={categoryId}
+                    onChange={(e) => { setCategoryId(e.target.value); setErrors((prev) => ({ ...prev, categoryId: "" })); }}
+                    disabled={submitting}
+                  >
+                    <option value="">Select a category…</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  {errors.categoryId && <span className="form-error">⚠ {errors.categoryId}</span>}
+                </div>
+
+                {/* Related System */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="select-related-system">
+                    Related System
+                  </label>
+                  <select
+                    id="select-related-system"
+                    className="form-control"
+                    value={relatedSystem}
+                    onChange={(e) => setRelatedSystem(e.target.value)}
+                    disabled={submitting}
+                  >
+                    {RELATED_SYSTEMS.map((sys) => (
+                      <option key={sys} value={sys}>{sys}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Requested Priority */}
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label" htmlFor="select-priority">
+                    Requested Priority
+                  </label>
+                  <select
+                    id="select-priority"
+                    className="form-control"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    disabled={submitting}
+                  >
+                    {PRIORITIES.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Description */}
@@ -185,6 +278,7 @@ export default function CreateTicketPage({ requesterId, onSuccess, onCancel }: P
               </div>
             </div>
           </div>
+
 
           {/* Attachments Card */}
           <div className="card">
