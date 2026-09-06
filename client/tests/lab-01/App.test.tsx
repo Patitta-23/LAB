@@ -1,43 +1,37 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+// tests/lab-01/App.test.tsx
+// Lab 2 App smoke tests — verifies the new Zen Green UI shell renders correctly.
+// The old "Check System" button was replaced by the Lab 2 multi-page SPA.
+// These tests cover the persistent elements: navbar brand, nav links, footer.
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
 import App from "../../src/App.js";
 import * as api from "../../src/api.js";
 
+beforeEach(() => {
+  // Prevent real network calls; requester selector will show loading state
+  vi.spyOn(api, "fetchRequesters").mockResolvedValue([]);
+});
+
 describe("App", () => {
-  it("renders the TokTickIT heading", () => {
+  it("renders the TokTickIT brand in the navbar", () => {
     render(<App />);
-    expect(screen.getByText(/TokTickIT/i)).toBeInTheDocument();
+    // The brand link contains "TokTickIT" text
+    expect(screen.getByRole("link", { name: /TokTickIT/i })).toBeInTheDocument();
   });
 
-  it("shows Online and the seeded categories on success", async () => {
-    vi.spyOn(api, "checkSystem").mockResolvedValue({
-      online: true,
-      categories: [
-        { id: 1, name: "Account and Access" },
-        { id: 2, name: "Hardware" },
-      ],
-    });
-
+  it("renders the 'My Tickets' navigation link", () => {
     render(<App />);
-    const button = screen.getByRole("button", { name: /Check System/i });
-    fireEvent.click(button);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Online/i)).toBeInTheDocument();
-      expect(screen.getByText("Account and Access")).toBeInTheDocument();
-      expect(screen.getByText("Hardware")).toBeInTheDocument();
-    });
+    expect(screen.getByRole("button", { name: /My Tickets/i })).toBeInTheDocument();
   });
 
-  it("shows an Offline error message when the API is unavailable", async () => {
-    vi.spyOn(api, "checkSystem").mockRejectedValue(new Error("Network error"));
-
+  it("renders the '+ New Ticket' navigation link", () => {
     render(<App />);
-    const button = screen.getByRole("button", { name: /Check System/i });
-    fireEvent.click(button);
+    expect(screen.getByRole("button", { name: /New Ticket/i })).toBeInTheDocument();
+  });
 
-    await waitFor(() => {
-      expect(screen.getByText(/Offline/i)).toBeInTheDocument();
-    });
+  it("renders the footer with CPE 334 Lab 2 text", () => {
+    render(<App />);
+    expect(screen.getByText(/CPE 334 Lab 2/i)).toBeInTheDocument();
   });
 });
