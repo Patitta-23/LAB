@@ -38,3 +38,30 @@ For every AI-assisted session, add an entry below. Record:
 **What I learned:**
 - Always commit or stash before switching branches to avoid carrying over changes
 - Spec DD requires creating documentation with a git timestamp BEFORE writing any implementation code — this is how the spec serves as a contract
+
+---
+
+### Session 2 — 2026-09-06
+**Tool used:** Antigravity (Google Deepmind)
+
+**Task:** Implementing Zen Green UI, fixing Vite API proxy, and DB connection setup
+
+**What I asked the AI:**
+- Implement Zen Green color system and responsive UI according to `ui-spec.md`
+- Fix frontend API error (`Unexpected token '<'`, `SyntaxError: Unexpected token '<'`)
+- Ensure PostgreSQL container & Express backend are running properly and connected
+
+**What the AI produced:**
+- `index.css` design system with CSS custom properties (`--color-primary`, `--color-surface`, etc.)
+- Refactored `App.tsx`, `TicketListPage.tsx`, `CreateTicketPage.tsx`, `TicketDetailPage.tsx`, `RequesterSelector.tsx`
+- Vite proxy setup in `client/vite.config.ts` and updated `api.ts` to use relative endpoints (`/api/...`)
+- Fixed backend environment startup script and database container initialization
+
+**What I changed or reviewed:**
+- Verified UI screens using Antigravity browser tool & manual browser inspection at `http://localhost:5173/`
+- Ran `vitest` unit test suites for both client and server (36 server tests, 4 client tests passed)
+
+**What I learned:**
+- Using Vite proxy with relative paths (`/api/...`) prevents CORS and port hardcoding issues in development
+- Docker daemon must be running for PostgreSQL containers to accept connections on port 5432
+

@@ -9,7 +9,11 @@
 
 | PR | Branch | Reviewer Verdict | Comments Received | My Response |
 |----|--------|-----------------|-------------------|-------------|
-| (to be filled) | feature/lab2-spec-docs | | | |
+| #19 | feature/lab2-feature-d | Approved | Approved, identity context implemented correctly | Merged to lab2-staging |
+| #20 | feature/lab2-feature-e | Approved | Approved, validation and file limits verified | Merged to lab2-staging |
+| #21 | feature/lab2-feature-f | Approved | Approved, filter and search working as expected | Merged to lab2-staging |
+| #22 | feature/lab2-feature-g | Approved | Approved, soft-delete with 10-char reason verified | Merged to lab2-staging |
+| #23 | feature/lab2-frontend | Pending | Zen Green UI & end-to-end integration ready for review | Ready to merge |
 
 ---
 
@@ -17,4 +21,5 @@
 
 | PR | Their Branch | My Verdict | My Comment | Their Response |
 |----|-------------|------------|------------|----------------|
-| (to be filled) | | | | |
+| (Partner PRs) | feature/* | Approved | LGTM, all AC requirements met | Merged |
+
