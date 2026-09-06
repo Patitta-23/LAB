@@ -47,6 +47,7 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
   const [errors,      setErrors]      = useState<Record<string, string>>({});
   const [submitting,  setSubmitting]  = useState(false);
   const [globalError, setGlobalError] = useState("");
+  const [attachmentError, setAttachmentError] = useState("");
   const [dragOver,    setDragOver]    = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,30 +66,38 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
 
   function addFiles(incoming: FileList | null) {
     if (!incoming) return;
+    setAttachmentError("");
     const arr = Array.from(incoming);
     const valid: File[] = [];
     const newErrs: string[] = [];
 
     for (const f of arr) {
-      if (!ALLOWED_TYPES.includes(f.type)) {
-        newErrs.push(`"${f.name}" is not an allowed file type.`);
+      const ext = f.name.split(".").pop()?.toLowerCase() ?? "";
+      const isAllowedExt = ["jpg", "jpeg", "png", "webp", "pdf"].includes(ext);
+      const isAllowedType = ALLOWED_TYPES.includes(f.type) || isAllowedExt;
+
+      if (!isAllowedType) {
+        newErrs.push("Unsupported file type. Only JPG, PNG, WEBP, and PDF are allowed.");
         continue;
       }
       if (f.size > MAX_FILE_SIZE) {
-        newErrs.push(`"${f.name}" exceeds 5 MB limit.`);
+        newErrs.push("File size exceeds 5MB.");
         continue;
       }
       valid.push(f);
     }
 
-    const combined = [...files, ...valid];
-    if (combined.length > MAX_FILES) {
-      setGlobalError(`You can attach at most ${MAX_FILES} files.`);
-      setFiles(combined.slice(0, MAX_FILES));
+    const currentCount = files.length;
+    if (currentCount + valid.length > MAX_FILES) {
+      const allowedSlots = Math.max(0, MAX_FILES - currentCount);
+      newErrs.push(`You can attach at most ${MAX_FILES} files.`);
+      setFiles([...files, ...valid.slice(0, allowedSlots)]);
     } else {
-      if (newErrs.length > 0) setGlobalError(newErrs.join(" "));
-      else setGlobalError("");
-      setFiles(combined);
+      setFiles([...files, ...valid]);
+    }
+
+    if (newErrs.length > 0) {
+      setAttachmentError(newErrs.join(" "));
     }
   }
 
@@ -112,7 +121,12 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
       const ticket = await createTicket(requesterId, fd);
       onSuccess(ticket.id);
     } catch (err: any) {
-      setGlobalError(err.message ?? "Failed to create ticket. Please try again.");
+      const msg = err.message || "";
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("connect") || msg.includes("502") || msg.includes("504")) {
+        setGlobalError("Cannot connect to server. Please try again.");
+      } else {
+        setGlobalError(err.message ?? "Cannot connect to server. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -126,12 +140,40 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
           <h1>New Ticket</h1>
           <p>Describe your IT issue and our team will help you out</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            type="button"
+            id="btn-preview-api-failure"
+            className="btn btn-sm"
+            style={{ fontSize: "11px", padding: "4px 8px", background: "#fee2e2", border: "1px solid #fca5a5", color: "#991b1b", borderRadius: "4px", cursor: "pointer" }}
+            onClick={() => {
+              setGlobalError("Cannot connect to server. Please try again.");
+            }}
+            title="Preview safe error callout for Report Item 5"
+          >
+            Preview Server Error
+          </button>
+          <button
+            type="button"
+            id="btn-preview-attachment-error"
+            className="btn btn-sm"
+            style={{ fontSize: "11px", padding: "4px 8px", background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", borderRadius: "4px", cursor: "pointer" }}
+            onClick={() => {
+              setAttachmentError("Unsupported file type. Only JPG, PNG, WEBP, and PDF are allowed.");
+              if (files.length === 0) {
+                const dummy = new File(["sample binary image content"], "wifi_error_log.png", { type: "image/png" });
+                setFiles([dummy]);
+              }
+            }}
+            title="Preview attachment error message & valid file chip for Report Item 6"
+          >
+            Preview File Error
+          </button>
           <button
             type="button"
             id="btn-preview-busy"
             className="btn btn-sm"
-            style={{ fontSize: "11px", padding: "4px 10px", background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", borderRadius: "4px", cursor: "pointer" }}
+            style={{ fontSize: "11px", padding: "4px 8px", background: "#e0e7ff", border: "1px solid #c7d2fe", color: "#3730a3", borderRadius: "4px", cursor: "pointer" }}
             onClick={() => {
               setSubmitting(true);
               setTimeout(() => setSubmitting(false), 5000);
@@ -337,6 +379,29 @@ export default function CreateTicketPage({ requester, requesterId, onSuccess, on
                     style={{ display: "none" }}
                     onChange={(e) => addFiles(e.target.files)}
                   />
+                </div>
+              )}
+
+              {/* Attachment Error Message */}
+              {attachmentError && (
+                <div
+                  id="attachment-error-msg"
+                  className="form-error"
+                  style={{
+                    marginTop: "var(--space-2)",
+                    padding: "8px 12px",
+                    background: "#fee2e2",
+                    border: "1px solid #fca5a5",
+                    borderRadius: "var(--radius-md)",
+                    color: "#991b1b",
+                    fontSize: 13,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <span>⚠</span>
+                  <span>{attachmentError}</span>
                 </div>
               )}
 

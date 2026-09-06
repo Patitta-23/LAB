@@ -146,12 +146,20 @@ export async function createTicket(
   requesterId: number,
   data: FormData
 ): Promise<Ticket> {
-  const res = await fetch("/api/tickets", {
-    method: "POST",
-    headers: { "X-Requester-Id": String(requesterId) },
-    body: data,
-  });
+  let res: Response;
+  try {
+    res = await fetch("/api/tickets", {
+      method: "POST",
+      headers: { "X-Requester-Id": String(requesterId) },
+      body: data,
+    });
+  } catch {
+    throw new Error("Cannot connect to server. Please try again.");
+  }
   if (!res.ok) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new Error("Cannot connect to server. Please try again.");
+    }
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? `HTTP ${res.status}`);
   }
