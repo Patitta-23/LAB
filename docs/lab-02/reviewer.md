@@ -13,7 +13,8 @@
 | #20 | feature/lab2-feature-e | Approved | Approved, validation and file limits verified | Merged to lab2-staging |
 | #21 | feature/lab2-feature-f | Approved | Approved, filter and search working as expected | Merged to lab2-staging |
 | #22 | feature/lab2-feature-g | Approved | Approved, soft-delete with 10-char reason verified | Merged to lab2-staging |
-| #23 | feature/lab2-frontend | Pending | Zen Green UI & end-to-end integration ready for review | Ready to merge |
+| #23 | feature/lab2-frontend | Approved | Approved, Zen Green UI and Vite API proxy verified | Merged to lab2-staging |
+| #24 | lab2-staging | Approved | Approved, final Lab 2 release ready for deployment | Merged to main |
 
 ---
 
@@ -22,4 +23,5 @@
 | PR | Their Branch | My Verdict | My Comment | Their Response |
 |----|-------------|------------|------------|----------------|
 | (Partner PRs) | feature/* | Approved | LGTM, all AC requirements met | Merged |
+
 
