@@ -65,3 +65,30 @@ For every AI-assisted session, add an entry below. Record:
 - Using Vite proxy with relative paths (`/api/...`) prevents CORS and port hardcoding issues in development
 - Docker daemon must be running for PostgreSQL containers to accept connections on port 5432
 
+---
+
+### Session 3 — 2026-09-06
+**Tool used:** Antigravity (Google Deepmind)
+
+**Task:** Implementing Section 8.1 Required Development Requester Selection Screen
+
+**What I asked the AI:**
+- Build the dedicated Development Requester Selection Screen required in Section 8.1 of the lab specification
+- Ensure all required elements are present: breadcrumb, user+gear icon badge, title, explanatory text, dropdown loaded from PostgreSQL, info banner, Lab 3 auth notice, cancel/continue buttons, and safe error states
+- Add unit tests for Section 8.1 and verify on browser
+
+**What the AI produced:**
+- Created `client/src/pages/SelectRequesterPage.tsx` with keyboard-accessible form controls and Zen Green design
+- Added CSS styles in `client/src/index.css` for the card layout, badge, info banners, and Lab 3 notice box
+- Updated `App.tsx` and `RequesterSelector.tsx` to route to and trigger the Development Requester Selection Screen
+- Created `client/tests/lab-02/SelectRequesterPage.test.tsx` with 7 test cases covering all 8.1 acceptance requirements
+- Verified via browser screenshot at `http://localhost:5173/`
+
+**What I changed or reviewed:**
+- Verified layout and element alignment against Section 8.1 mockup
+- Executed full Vitest suite (36 server tests + 11 client tests passed)
+
+**What I learned:**
+- Providing dedicated development context selection screens with explicit testing notices prevents confusion before formal authentication (Lab 3) is implemented
+
+

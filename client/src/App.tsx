@@ -2,18 +2,50 @@ import React, { useState } from "react";
 import "./index.css";
 import { Requester } from "./api";
 import RequesterSelector from "./components/RequesterSelector";
+import SelectRequesterPage from "./pages/SelectRequesterPage";
 import TicketListPage from "./pages/TicketListPage";
 import CreateTicketPage from "./pages/CreateTicketPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 
 type Page =
+  | { name: "select-requester" }
   | { name: "list" }
   | { name: "create" }
   | { name: "detail"; ticketId: number };
 
 export default function App() {
-  const [requester, setRequester] = useState<Requester | null>(null);
-  const [page, setPage]           = useState<Page>({ name: "list" });
+  const [requester, setRequester] = useState<Requester | null>(() => {
+    try {
+      const saved = localStorage.getItem("toktickit_requester");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [page, setPage] = useState<Page>(() => {
+    const saved = localStorage.getItem("toktickit_requester");
+    return saved ? { name: "list" } : { name: "select-requester" };
+  });
+
+  const handleSelectRequester = (r: Requester) => {
+    setRequester(r);
+    try {
+      localStorage.setItem("toktickit_requester", JSON.stringify(r));
+    } catch (err) {
+      console.error("Failed to save requester to storage", err);
+    }
+    setPage({ name: "list" });
+  };
+
+  const handleRequesterChangeFromNavbar = (r: Requester) => {
+    setRequester(r);
+    try {
+      localStorage.setItem("toktickit_requester", JSON.stringify(r));
+    } catch (err) {
+      console.error("Failed to save requester to storage", err);
+    }
+  };
 
   const currentPage = page.name;
 
@@ -23,7 +55,15 @@ export default function App() {
       <nav className="navbar" role="navigation" aria-label="Main navigation">
         <div className="navbar-inner">
           {/* Brand */}
-          <a className="navbar-brand" href="#" id="navbar-brand" onClick={(e) => { e.preventDefault(); setPage({ name: "list" }); }}>
+          <a
+            className="navbar-brand"
+            href="#"
+            id="navbar-brand"
+            onClick={(e) => {
+              e.preventDefault();
+              setPage(requester ? { name: "list" } : { name: "select-requester" });
+            }}
+          >
             <div className="navbar-logo" aria-hidden="true">TT</div>
             <span className="navbar-title">TokTickIT</span>
           </a>
@@ -34,6 +74,7 @@ export default function App() {
               id="nav-my-tickets"
               className={`nav-link${currentPage === "list" ? " active" : ""}`}
               onClick={() => setPage({ name: "list" })}
+              disabled={!requester}
             >
               My Tickets
             </button>
@@ -48,29 +89,33 @@ export default function App() {
           </div>
 
           {/* Requester Selector */}
-          <RequesterSelector requester={requester} onChange={setRequester} />
+          <RequesterSelector
+            requester={requester}
+            onChange={handleRequesterChangeFromNavbar}
+            onOpenSelectPage={() => setPage({ name: "select-requester" })}
+          />
         </div>
       </nav>
 
       {/* ── Main Content ────────────────────────────── */}
       <main style={{ flex: 1 }}>
-        {!requester ? (
-          /* Loading state while requester list loads */
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "60vh",
-              gap: "var(--space-4)",
+        {page.name === "select-requester" ? (
+          <SelectRequesterPage
+            currentRequester={requester}
+            onSelect={handleSelectRequester}
+            onCancel={() => {
+              if (requester) {
+                setPage({ name: "list" });
+              }
             }}
-          >
-            <div style={{ fontSize: 40, opacity: 0.3 }}>🎫</div>
-            <p style={{ color: "var(--color-text-secondary)", fontSize: 15 }}>
-              Loading TokTickIT…
-            </p>
-          </div>
+          />
+        ) : !requester ? (
+          /* If navigating to other pages without requester, redirect to selection */
+          <SelectRequesterPage
+            currentRequester={null}
+            onSelect={handleSelectRequester}
+            onCancel={() => {}}
+          />
         ) : (
           <div className="page-container">
             {page.name === "list" && (
@@ -113,3 +158,4 @@ export default function App() {
     </div>
   );
 }
+

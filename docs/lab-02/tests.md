@@ -48,10 +48,13 @@ server/tests/lab-02/
   tickets-list.test.ts    — T-13, T-14, T-15, T-16, T-17
   attachments.test.ts     — T-18, T-19, T-20, T-21
 
+client/tests/lab-01/
+  App.test.tsx                — Nav, brand, and layout smoke tests
+
 client/tests/lab-02/
-  RequesterSelector.test.tsx  — T-02, T-03
-  CreateTicketForm.test.tsx   — T-11, T-12
-  AttachmentPanel.test.tsx    — T-22, T-23
+  SelectRequesterPage.test.tsx — T-02, T-03 (Section 8.1 Required Dev Requester Selection)
+  CreateTicketForm.test.tsx    — T-11, T-12
+  AttachmentPanel.test.tsx     — T-22, T-23
 ```
 
 ---
@@ -78,9 +81,10 @@ client/tests/lab-02/
  RUN  v2.1.9 /Users/patittadaensikaew/Documents/working/toktickit/client
 
  ✓ tests/lab-01/App.test.tsx (4 tests)
+ ✓ tests/lab-02/SelectRequesterPage.test.tsx (7 tests)
 
- Test Files  1 passed (1)
-      Tests  4 passed (4)
+ Test Files  2 passed (2)
+      Tests  11 passed (11)
 ```
 
 ---

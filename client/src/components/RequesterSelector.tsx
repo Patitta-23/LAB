@@ -4,6 +4,7 @@ import { Requester, fetchRequesters } from "../api";
 interface Props {
   requester: Requester | null;
   onChange: (r: Requester) => void;
+  onOpenSelectPage?: () => void;
 }
 
 function getInitials(name: string): string {
@@ -14,7 +15,7 @@ function getInitials(name: string): string {
     .join("");
 }
 
-export default function RequesterSelector({ requester, onChange }: Props) {
+export default function RequesterSelector({ requester, onChange, onOpenSelectPage }: Props) {
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -111,6 +112,30 @@ export default function RequesterSelector({ requester, onChange }: Props) {
               )}
             </div>
           ))}
+
+          {onOpenSelectPage && (
+            <div
+              className="requester-dropdown-footer"
+              style={{
+                borderTop: "1px solid var(--color-border)",
+                padding: "10px 14px",
+                cursor: "pointer",
+                fontSize: "13px",
+                color: "var(--color-primary)",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                backgroundColor: "var(--color-surface)",
+              }}
+              onClick={() => {
+                setOpen(false);
+                onOpenSelectPage();
+              }}
+            >
+              <span>⚙ Switch Requester Screen…</span>
+            </div>
+          )}
         </div>
       )}
     </div>
