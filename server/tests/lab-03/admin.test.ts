@@ -48,8 +48,11 @@ describe("Lab 3 — Admin User Management Integration Tests", () => {
         email: "requester.test@toktickit.com",
         passwordHash: hash,
         role: "Requester",
-        isActive: true,
       },
+    });
+
+    await prisma.user.deleteMany({
+      where: { email: "new.employee@toktickit.com" },
     });
 
     // Authenticate Agents
