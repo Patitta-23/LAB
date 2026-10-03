@@ -1,15 +1,39 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
+import session from "express-session";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { getPrisma } from "./prisma.js";
 import { requesterRouter } from "./routes/requesterRoutes.js";
+import { authRouter } from "./routes/authRoutes.js";
 
 export const app = express();
 
-app.use(cors());
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
+
+// ---------------------------------------------------------------------------
+// Lab 3 — Session middleware (express-session)
+// SESSION_SECRET from .env (BR-02, never hardcode)
+// ---------------------------------------------------------------------------
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET ?? "fallback-dev-secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: false,      // set to true in production with HTTPS
+      maxAge: 8 * 60 * 60 * 1000, // 8 hours
+    },
+  })
+);
+
+// ---------------------------------------------------------------------------
+// Lab 3 — Auth routes
+// ---------------------------------------------------------------------------
+app.use("/api/auth", authRouter);
 
 // ---------------------------------------------------------------------------
 // File upload configuration — Feature E (multer, BR-06, BR-07)
