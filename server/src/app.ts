@@ -7,6 +7,8 @@ import multer from "multer";
 import { getPrisma } from "./prisma.js";
 import { requesterRouter } from "./routes/requesterRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
+import { itStaffRouter } from "./routes/itStaffRoutes.js";
+import { commentRouter } from "./routes/commentRoutes.js";
 
 export const app = express();
 
@@ -31,9 +33,12 @@ app.use(
 );
 
 // ---------------------------------------------------------------------------
-// Lab 3 — Auth routes
+// Lab 3 — Auth & IT Staff routes
 // ---------------------------------------------------------------------------
 app.use("/api/auth", authRouter);
+app.use("/api/it-staff", itStaffRouter);
+app.use("/api/tickets", commentRouter);
+
 
 // ---------------------------------------------------------------------------
 // File upload configuration — Feature E (multer, BR-06, BR-07)
