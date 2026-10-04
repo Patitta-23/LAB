@@ -100,3 +100,40 @@ commentRouter.post("/:id/comments", requireAuth, async (req: Request, res: Respo
     res.status(500).json({ error: "Internal server error." });
   }
 });
+
+// ---------------------------------------------------------------------------
+// POST /api/tickets/:id/resolve
+// Requester marks ticket as RESOLVED ("Problem Appears Resolved")
+// ---------------------------------------------------------------------------
+commentRouter.post("/:id/resolve", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const ticketId = parseInt(req.params.id, 10);
+  if (isNaN(ticketId)) {
+    res.status(400).json({ error: "Invalid ticket ID." });
+    return;
+  }
+
+  try {
+    const prisma = getPrisma();
+    const ticket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
+
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found." });
+      return;
+    }
+
+    if (ticket.requesterId !== req.session.userId) {
+      res.status(403).json({ error: "Forbidden." });
+      return;
+    }
+
+    const updated = await prisma.lab3Ticket.update({
+      where: { id: ticketId },
+      data: { status: "RESOLVED" },
+    });
+
+    res.status(200).json({ message: "Ticket marked as resolved.", status: updated.status, ticket: updated });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
