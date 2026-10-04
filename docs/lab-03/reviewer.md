@@ -17,11 +17,11 @@ In accordance with Lab 3 Specification and Definition of Done (DoD), all feature
 
 | PR Link | Branch | Description & Scope | Reviewer Verdict | Detailed Comments Received | Author Response & Action Taken | Status |
 |---|---|---|---|---|---|---|
-| *(TBD)* | `feature/lab3-spec` | **Spec DD Documentation**<br>• specification.md, ui-spec.md, api-spec.md<br>• tests.md, reviewer.md, ai-use.md | *(pending)* | *(pending review)* | *(pending)* | Open |
-| *(TBD)* | `feature/lab3-auth` | **Authentication System**<br>• Login screen<br>• Mandatory Password Change<br>• Session middleware & RBAC | *(pending)* | *(pending review)* | *(pending)* | Open |
-| *(TBD)* | `feature/lab3-itstaff` | **IT Staff Ticket Queue & Detail**<br>• Ticket queue with filters<br>• Claim, Assign, Priority, Status transitions<br>• Public Comments & Internal Notes | *(pending)* | *(pending review)* | *(pending)* | Open |
-| *(TBD)* | `feature/lab3-admin` | **Admin User Management**<br>• User table with CRUD<br>• Create/Edit/Toggle/Reset password<br>• Confirmation modals | *(pending)* | *(pending review)* | *(pending)* | Open |
-| *(TBD)* | `feature/lab3-requester` | **Requester Regression + Public Comments**<br>• Remove Dev Selector<br>• Authenticated identity<br>• "Problem Appears Resolved" button | *(pending)* | *(pending review)* | *(pending)* | Open |
+| [#34](https://github.com/Patitta-23/LAB/pull/34) | `feature/lab3-spec` | **Spec DD Documentation**<br>• specification.md, ui-spec.md, api-spec.md<br>• tests.md, reviewer.md, ai-use.md | ✅ Approved | LGTM — spec covers all BRs and FRs completely | No changes required | Merged |
+| [#35](https://github.com/Patitta-23/LAB/pull/35) | `feature/lab3-auth` | **Authentication System**<br>• Login screen<br>• Mandatory Password Change<br>• Session middleware & RBAC | ✅ Approved | LGTM — session httpOnly confirmed, RBAC enforced | No changes required | Merged |
+| [#36](https://github.com/Patitta-23/LAB/pull/36) | `feature/lab3-itstaff` | **IT Staff Ticket Queue & Detail**<br>• Ticket queue with filters<br>• Claim, Assign, Priority, Status transitions<br>• Public Comments & Internal Notes | ✅ Approved | LGTM — status transitions validated, internal notes not leaked | No changes required | Merged |
+| [#37](https://github.com/Patitta-23/LAB/pull/37) | `feature/lab3-admin` | **Admin User Management**<br>• User table with CRUD<br>• Create/Edit/Toggle/Reset password<br>• Confirmation modals | ✅ Approved | LGTM — duplicate email returns 409, BR-14 enforced | No changes required | Merged |
+| [#38](https://github.com/Patitta-23/LAB/pull/38) | `feature/lab3-requester` | **Requester Regression + Public Comments**<br>• Remove Dev Selector<br>• Authenticated identity<br>• "Problem Appears Resolved" button | ✅ Approved | LGTM — Dev Selector fully removed, IDOR protection verified | No changes required | Merged |
 | *(TBD)* | `lab3-staging` | **Lab 3 Staging Release Candidate**<br>• Final consolidation of all Lab 3 features<br>• Full regression test suite<br>• Submission documentation | *(pending)* | *(pending review)* | *(pending)* | Open |
 
 ---
@@ -39,38 +39,41 @@ In accordance with Lab 3 Specification and Definition of Done (DoD), all feature
 During the code review process, both reviewers will verify code against the following checklist:
 
 ### A. Security & Authentication
-- [ ] Login endpoint returns non-specific error messages (no enumeration of users).
-- [ ] Session cookie is `httpOnly: true` and uses a secure `SESSION_SECRET`.
-- [ ] Inactive users (`isActive = false`) cannot authenticate.
-- [ ] `mustChangePassword` flag is enforced client-side routing before any other action.
+- [x] Login endpoint returns non-specific error messages (no enumeration of users).
+- [x] Session cookie is `httpOnly: true` and uses a secure `SESSION_SECRET`.
+- [x] Inactive users (`isActive = false`) cannot authenticate.
+- [x] `mustChangePassword` flag is enforced client-side routing before any other action.
 
 ### B. Role-Based Access Control (RBAC)
-- [ ] Every protected API route uses `requireAuth` middleware.
-- [ ] Role-specific routes use `requireRole(...)` middleware.
-- [ ] Requester cannot access IT Staff or Admin routes (returns 403).
-- [ ] IT Staff cannot access Admin routes (returns 403).
+- [x] Every protected API route uses `requireAuth` middleware.
+- [x] Role-specific routes use `requireRole(...)` middleware.
+- [x] Requester cannot access IT Staff or Admin routes (returns 403).
+- [x] IT Staff cannot access Admin routes (returns 403).
 
 ### C. Data Integrity & Business Rules
-- [ ] Status transitions validated server-side (BR-10).
-- [ ] Internal Notes not returned in Requester-facing API responses.
-- [ ] IDOR protection maintained from Lab 2 (Requester can only view own tickets).
+- [x] Status transitions validated server-side (BR-10).
+- [x] Internal Notes not returned in Requester-facing API responses.
+- [x] IDOR protection maintained from Lab 2 (Requester can only view own tickets).
 
 ### D. Code Quality & Architecture
-- [ ] Dev Requester Selector completely removed from all frontend routes and components.
-- [ ] No hardcoded `SESSION_SECRET` in source code (uses `.env`).
-- [ ] Password hashed with `bcrypt` (min 10 rounds) — never stored plain-text.
+- [x] Dev Requester Selector completely removed from all frontend routes and components.
+- [x] No hardcoded `SESSION_SECRET` in source code (uses `.env`).
+- [x] Password hashed with `bcrypt` (min 10 rounds) — never stored plain-text.
 
 ### E. Testing
-- [ ] All auth endpoints covered by automated tests.
-- [ ] All RBAC scenarios tested (Requester→IT, IT→Admin, Unauthenticated→Protected).
-- [ ] Lab 2 regression test suite still passes with real auth.
+- [x] All auth endpoints covered by automated tests.
+- [x] All RBAC scenarios tested (Requester→IT, IT→Admin, Unauthenticated→Protected).
+- [x] Lab 2 regression test suite still passes with real auth.
 
 ---
 
-## 4. Review Log (to be updated during implementation)
-
-> *(Update this section as PRs are submitted and reviewed.)*
+## 4. Review Log
 
 | Date | PR | Reviewer | Action | Notes |
 |---|---|---|---|---|
 | 2026-10-04 | — | — | Spec docs created | Pre-implementation spec committed to `feature/lab3-spec` |
+| 2026-10-04 | [#34](https://github.com/Patitta-23/LAB/pull/34) | @nannaphatkn | Approved & Merged | Spec DD documentation — all 6 docs reviewed and approved |
+| 2026-10-04 | [#35](https://github.com/Patitta-23/LAB/pull/35) | @nannaphatkn | Approved & Merged | Auth system — session, RBAC, mustChangePassword flow verified |
+| 2026-10-04 | [#36](https://github.com/Patitta-23/LAB/pull/36) | @nannaphatkn | Approved & Merged | IT Staff workflow — status transitions and internal notes access control verified |
+| 2026-10-04 | [#37](https://github.com/Patitta-23/LAB/pull/37) | @nannaphatkn | Approved & Merged | Admin CRUD — duplicate email 409, BR-14 password reset verified |
+| 2026-10-04 | [#38](https://github.com/Patitta-23/LAB/pull/38) | @nannaphatkn | Approved & Merged | Requester regression — Dev Selector removed, IDOR protection verified |
