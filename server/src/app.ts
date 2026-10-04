@@ -9,6 +9,7 @@ import { requesterRouter } from "./routes/requesterRoutes.js";
 import { authRouter } from "./routes/authRoutes.js";
 import { itStaffRouter } from "./routes/itStaffRoutes.js";
 import { commentRouter } from "./routes/commentRoutes.js";
+import { adminRouter } from "./routes/adminRoutes.js";
 
 export const app = express();
 
@@ -33,11 +34,12 @@ app.use(
 );
 
 // ---------------------------------------------------------------------------
-// Lab 3 — Auth & IT Staff routes
+// Lab 3 — Auth, IT Staff & Admin routes
 // ---------------------------------------------------------------------------
 app.use("/api/auth", authRouter);
 app.use("/api/it-staff", itStaffRouter);
 app.use("/api/tickets", commentRouter);
+app.use("/api/admin", adminRouter);
 
 
 // ---------------------------------------------------------------------------
