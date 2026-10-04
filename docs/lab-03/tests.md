@@ -137,4 +137,10 @@ Lab 3 introduces authentication, role-based access control, and complex multi-ac
 
 | Date | Test Suite | Passed | Failed | Notes |
 |---|---|---|---|---|
-| 2026-10-04 | Spec written (pre-implementation) | — | — | Tests to be written during implementation |
+| 2026-10-04 | Spec written (pre-implementation) | — | — | Baseline specification committed to `feature/lab3-spec` |
+| 2026-10-04 | Server: Auth & RBAC (`server/tests/lab-03/auth.test.ts`) | 9 / 9 | 0 | Login, logout, /me, mustChangePassword, session cookies, bcrypt verification |
+| 2026-10-04 | Server: IT Staff Workflow (`server/tests/lab-03/itstaff.test.ts`) | 9 / 9 | 0 | Queue filters, claim/assign, BR-10 status transitions, IT priority, internal notes isolation |
+| 2026-10-04 | Server: Admin User Management (`server/tests/lab-03/admin.test.ts`) | 10 / 10 | 0 | User CRUD, toggle active (self & last admin guards), reset password, 409 duplicate email |
+| 2026-10-04 | Server: Requester & Regression (`server/tests/lab-03/requester.test.ts` + Lab 1 & 2) | 40 / 40 | 0 | Authenticated requester flow, Problem Appears Resolved, Lab 1 & 2 regression tests |
+| 2026-10-04 | Client: Component Tests (`client/tests/lab-03/` + Lab 1 & 2) | 23 / 23 | 0 | LoginPage (UI-01..04), ChangePasswordPage (UI-05..07), ItQueuePage (UI-08..09), AdminUsersPage (UI-10..12), App nav & roles |
+| **Total** | **Full System Test Suite (Server + Client)** | **91 / 91** | **0** | **100% Pass Rate across all 16 test files (68 Server + 23 Client)** |
