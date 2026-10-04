@@ -17,6 +17,7 @@
 | 5 | **Frontend Implementation** | *"ต่อ (Implement Frontend Auth & Role-based UI)"* | Created `AuthContext.tsx`, `NavBar.tsx`, `LoginPage.tsx`, `ChangePasswordPage.tsx`, `ItQueuePage.tsx`, `ItTicketDetailPage.tsx`, `AdminUsersPage.tsx`, and 23 client component tests. | Verified all 23 client tests pass, role-based routing works, and Dev Requester Selector completely removed. |
 | 6 | **PR Process & Workflow** | *"เปิด Pull Requests บน GitHub"* | Reset `lab3-staging` to base commit, created 5 PR links (feature/* → lab3-staging), provided PR titles and body templates for `@nannaphatkn` review. | Verified all 5 PRs (#34–#38) created with correct base branch, reviewed and merged in order. |
 | 7 | **Reviewer Feedback Fix** | *"ช่วยแก้ให้หน่อย (toggle-active guards)"* | Added 2 safety guards to `adminRoutes.ts` toggle-active: (1) Admin cannot deactivate own account, (2) Cannot deactivate last active Administrator. Updated `reviewer.md` with PR #39, partner PRs #28/#29/#32/#33/#36, and fixed repo link. | Verified code change is correct, committed and pushed. PR #39 re-approved and merged to `main` by `@nannaphatkn`. |
+| 8 | **UX & Guard Hardening** | *"ทดสอบระบบ 6 ข้อ / 7 ข้อ และปรับปรุง Error feedback"* | Added alert callout to `ConfirmToggleModal` for toggle-active error display, re-ordered Last Admin Guard before self-deactivation check, fixed URL routing in `App.tsx` so direct `/admin/users` access renders `ForbiddenPage` 403, and seeded sample realistic tickets. | Verified in browser that both admin guards show correct error banners, non-admin direct access shows 403 Forbidden, and IT Queue shows seeded tickets. All 91 tests pass. |
 
 ---
 
@@ -163,3 +164,32 @@
 **What I learned:**
 - Peer review is essential for catching security gaps — the self-deactivation and last-admin-lock scenarios were valid security concerns that automated tests had not covered.
 - Always verify role-based business rules include edge cases (e.g., "last admin" scenario) not just happy paths.
+
+---
+
+### Session 6 — 2026-10-05
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** System verification, UX hardening, and edge-case security guard refinements.
+
+**What I asked the AI:**
+- Verify all 6 Authentication requirements and 7 IT Staff / Admin workflow test cases in browser.
+- Fix `ConfirmToggleModal` in `AdminUsersPage.tsx` to display error callouts when toggle-active returns 400 Bad Request.
+- Re-order guards in `adminRoutes.ts` toggle-active so Last Active Administrator check precedes self-deactivation check.
+- Fix URL routing in `App.tsx` so unauthenticated direct access redirects to `/login` and non-admin direct access to `/admin/users` renders `ForbiddenPage` (403 Forbidden).
+- Add realistic Lab 3 sample tickets & notes into `prisma/seed.ts` and sync requester ticket creation to `Lab3Ticket`.
+
+**What the AI produced:**
+- `client/src/pages/AdminUsersPage.tsx`: Added internal `error` state and alert callout to `ConfirmToggleModal` for immediate feedback.
+- `server/src/routes/adminRoutes.ts`: Placed Last Active Admin check before Self-deactivation check.
+- `client/src/App.tsx`: Refined path matching order so `/admin` paths are parsed before role defaults, triggering the `!isAdmin` guard and displaying `ForbiddenPage`.
+- `server/prisma/seed.ts`: Seeded 4 sample tickets for Alice and Bob with comments and notes; updated `server/src/app.ts` to sync `POST /api/tickets` to `Lab3Ticket`.
+- Ran full test suites: 68/68 server tests passed, 23/23 client tests passed (91/91 total).
+
+**What I changed or reviewed:**
+- Manually tested self-deactivation and last-admin guards in browser — verified both red warning banners appear properly.
+- Tested direct URL navigation to `/admin/users` as IT Staff (`eve@toktickit.com`) and Requester (`alice@toktickit.com`) — verified 403 Forbidden page is displayed.
+- Verified IT Queue displays realistic seeded tickets.
+
+**What I learned:**
+- Guard evaluation order is critical: if a self-deactivation check runs before a last-admin check, the system may report the wrong error when a single admin tries to deactivate themselves.
+- Client-side routing must evaluate deep-linked URLs independently of default user role homepages to ensure permission guards trigger reliably on direct address-bar navigation.
