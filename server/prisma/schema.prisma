@@ -3,7 +3,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -15,16 +14,16 @@ datasource db {
 // Lab 1 — IT request categories (4 seeded: Account and Access, Hardware, Software, Network)
 // ---------------------------------------------------------------------------
 model Category {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  createdAt   DateTime     @default(now())
-  tickets     Ticket[]
-  lab3Tickets Lab3Ticket[]
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  tickets   Ticket[]
 }
 
 // ---------------------------------------------------------------------------
 // Lab 2 Feature D — Development Requester Context
-// Retained for backward compatibility. Replaced by User model in Lab 3.
+// Simulates authenticated users before real JWT auth (Lab 3).
+// isActive: false → excluded from the Dev Requester Selector (BR-11)
 // ---------------------------------------------------------------------------
 model Requester {
   id         Int      @id @default(autoincrement())
@@ -38,44 +37,9 @@ model Requester {
 }
 
 // ---------------------------------------------------------------------------
-// Lab 3 — User model (replaces Dev Requester Selector)
-// Three roles: Requester, IT_Staff, Administrator (BR-05)
-// mustChangePassword: true forces password change on next login (BR-03, BR-14)
-// ---------------------------------------------------------------------------
-enum UserRole {
-  Requester
-  IT_Staff
-  Administrator
-}
-
-enum ItPriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-model User {
-  id                 Int       @id @default(autoincrement())
-  name               String
-  email              String    @unique
-  passwordHash       String
-  role               UserRole
-  isActive           Boolean   @default(true)
-  mustChangePassword Boolean   @default(true)
-  lastLoginAt        DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  // Relations
-  ownedTickets       Lab3Ticket[]    @relation("TicketRequester")
-  assignedTickets    Lab3Ticket[]    @relation("TicketAssignedStaff")
-  publicComments     PublicComment[]
-  internalNotes      InternalNote[]
-}
-
-// ---------------------------------------------------------------------------
-// Lab 2 Feature E — Ticket (Lab 2 Requester-based, kept for Lab 2 compatibility)
+// Lab 2 Feature E — Ticket
+// status defaults to OPEN (BR-04). Owned by exactly one Requester (BR-01).
+// Attachments relation added in Feature G.
 // ---------------------------------------------------------------------------
 enum TicketStatus {
   OPEN
@@ -94,8 +58,8 @@ model Ticket {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  category    Category    @relation(fields: [categoryId],  references: [id])
-  requester   Requester   @relation(fields: [requesterId], references: [id])
+  category  Category  @relation(fields: [categoryId],  references: [id])
+  requester Requester @relation(fields: [requesterId], references: [id])
   attachments Attachment[]
 }
 
@@ -116,71 +80,3 @@ model Attachment {
 
   ticket Ticket @relation(fields: [ticketId], references: [id])
 }
-
-// Lab 3 — Lab3Attachment (soft-delete, same rules as Lab 2 BR-08, BR-09)
-model Lab3Attachment {
-  id           Int        @id @default(autoincrement())
-  ticketId     Int
-  filename     String
-  mimeType     String
-  sizeBytes    Int
-  storagePath  String
-  deletedAt    DateTime?
-  deleteReason String?
-  createdAt    DateTime   @default(now())
-
-  ticket Lab3Ticket @relation(fields: [ticketId], references: [id])
-}
-
-// ---------------------------------------------------------------------------
-// Lab 3 — Lab3Ticket (Auth-based, replaces Ticket for Lab 3 workflow)
-// Linked to User (requesterId) and optionally assigned to IT_Staff (assignedStaffId)
-// ---------------------------------------------------------------------------
-model Lab3Ticket {
-  id               Int          @id @default(autoincrement())
-  title            String
-  description      String
-  status           TicketStatus @default(OPEN)
-  itPriority       ItPriority?
-  categoryId       Int
-  requesterId      Int
-  assignedStaffId  Int?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-
-  category        Category        @relation(fields: [categoryId],      references: [id])
-  requester       User            @relation("TicketRequester",         fields: [requesterId],     references: [id])
-  assignedStaff   User?           @relation("TicketAssignedStaff",     fields: [assignedStaffId], references: [id])
-  attachments     Lab3Attachment[]
-  publicComments  PublicComment[]
-  internalNotes   InternalNote[]
-}
-
-// ---------------------------------------------------------------------------
-// Lab 3 — PublicComment (visible to Requester + IT Staff, BR-11, FR-06)
-// ---------------------------------------------------------------------------
-model PublicComment {
-  id        Int        @id @default(autoincrement())
-  ticketId  Int
-  authorId  Int
-  content   String
-  createdAt DateTime   @default(now())
-
-  ticket    Lab3Ticket @relation(fields: [ticketId], references: [id])
-  author    User       @relation(fields: [authorId], references: [id])
-}
-
-// ---------------------------------------------------------------------------
-// Lab 3 — InternalNote (IT Staff + Admin only, BR-12, FR-06)
-// ---------------------------------------------------------------------------
-model InternalNote {
-  id        Int        @id @default(autoincrement())
-  ticketId  Int
-  authorId  Int
-  content   String
-  createdAt DateTime   @default(now())
-
-  ticket    Lab3Ticket @relation(fields: [ticketId], references: [id])
-  author    User       @relation(fields: [authorId], references: [id])
-}
-
