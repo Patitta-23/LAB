@@ -176,13 +176,13 @@ And they are redirected to the Login screen
 
 ## 5. Definition of Done (DoD)
 
-- [ ] All Spec DD documents created and committed to Git before any implementation code.
-- [ ] Feature branch merged into `lab3-staging` via PR with at least 1 peer review approval.
-- [ ] All acceptance criteria have a corresponding automated test (unit or API).
-- [ ] All tests pass (`npm test` in server and client).
-- [ ] Dev Requester Selector from Lab 2 is completely removed.
-- [ ] UI is verified responsive on Desktop, Tablet, Mobile.
-- [ ] AI use is logged in `ai-use.md` for every AI-assisted session.
-- [ ] `reviewer.md` updated with PR number, reviewer, and feedback summary.
-- [ ] No hardcoded secrets; `.env.example` updated if new env vars are added (e.g., `SESSION_SECRET`).
-- [ ] Submission evidence (screenshots Part 1–9) prepared.
+- [x] All Spec DD documents created and committed to Git before any implementation code.
+- [x] Feature branch merged into `lab3-staging` via PR with at least 1 peer review approval.
+- [x] All acceptance criteria have a corresponding automated test (unit or API).
+- [x] All tests pass (`npm test` in server and client — 91/91 tests passing).
+- [x] Dev Requester Selector from Lab 2 is completely removed.
+- [x] UI is verified responsive on Desktop, Tablet, Mobile.
+- [x] AI use is logged in `ai-use.md` for every AI-assisted session.
+- [x] `reviewer.md` updated with PR number, reviewer, and feedback summary.
+- [x] No hardcoded secrets; `.env.example` updated if new env vars are added (e.g., `SESSION_SECRET`).
+- [x] Submission evidence (screenshots Part 1–9) prepared.
