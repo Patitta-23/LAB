@@ -185,14 +185,7 @@ adminRouter.patch("/users/:id/toggle-active", async (req: Request, res: Response
       return;
     }
 
-    // Guard 1: Admin cannot deactivate their own account
-    const sessionUserId = (req.session as { userId?: number }).userId;
-    if (userId === sessionUserId) {
-      res.status(400).json({ error: "You cannot deactivate your own account." });
-      return;
-    }
-
-    // Guard 2: Cannot deactivate the last active Administrator
+    // Guard 1: Cannot deactivate the last active Administrator
     if (existing.role === "Administrator" && existing.isActive) {
       const activeAdminCount = await prisma.user.count({
         where: { role: "Administrator", isActive: true },
@@ -201,6 +194,13 @@ adminRouter.patch("/users/:id/toggle-active", async (req: Request, res: Response
         res.status(400).json({ error: "Cannot deactivate the last active Administrator. At least one active Administrator must remain." });
         return;
       }
+    }
+
+    // Guard 2: Admin cannot deactivate their own account
+    const sessionUserId = (req.session as { userId?: number }).userId;
+    if (userId === sessionUserId) {
+      res.status(400).json({ error: "You cannot deactivate your own account." });
+      return;
     }
 
     const updatedUser = await prisma.user.update({
