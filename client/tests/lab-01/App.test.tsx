@@ -1,37 +1,52 @@
-// tests/lab-01/App.test.tsx
-// Lab 2 App smoke tests — verifies the new Zen Green UI shell renders correctly.
-// The old "Check System" button was replaced by the Lab 2 multi-page SPA.
-// These tests cover the persistent elements: navbar brand, nav links, footer.
-
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import App from "../../src/App.js";
-import * as api from "../../src/api.js";
+import { render, screen, waitFor } from "@testing-library/react";
+import React from "react";
+import App from "../../src/App";
+import * as api from "../../src/api";
+
+const mockRequesterUser: api.AuthUser = {
+  id: 1,
+  name: "Jennifer Anderson",
+  email: "jennifer.anderson@company.com",
+  role: "Requester",
+  mustChangePassword: false,
+};
 
 beforeEach(() => {
-  // Prevent real network calls; requester selector will show loading state
-  vi.spyOn(api, "fetchRequesters").mockResolvedValue([]);
+  vi.restoreAllMocks();
+  vi.spyOn(api.authApi, "getMe").mockResolvedValue(mockRequesterUser);
+  vi.spyOn(api, "fetchTickets").mockResolvedValue({ data: [], total: 0, page: 1, limit: 10, totalPages: 1 } as any);
+  vi.spyOn(api, "fetchCategories").mockResolvedValue([]);
 });
 
-describe("App", () => {
-  it("renders the TokTickIT brand in the navbar", () => {
+describe("App (Lab 3)", () => {
+  it("renders the TokTickIT brand in the navbar when authenticated", async () => {
     render(<App />);
-    // The brand link contains "TokTickIT" text
-    expect(screen.getByRole("link", { name: /TokTickIT/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/TokTickIT/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
-  it("renders the 'My Tickets' navigation link", () => {
+  it("renders the 'My Tickets' navigation link", async () => {
     render(<App />);
-    expect(screen.getByRole("button", { name: /My Tickets/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /My Tickets/i })).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 
-  it("renders the '+ New Ticket' navigation link", () => {
+  it("renders the 'Create Ticket' navigation link", async () => {
     render(<App />);
-    expect(screen.getByRole("button", { name: /New Ticket/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByRole("button", { name: /Create Ticket/i }).length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
   });
 
-  it("renders the footer with CPE 334 Lab 2 text", () => {
+  it("renders user name and role badge in the navbar", async () => {
     render(<App />);
-    expect(screen.getByText(/CPE 334 Lab 2/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Jennifer Anderson")).toBeInTheDocument();
+      expect(screen.getByText("Requester")).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 });
+
