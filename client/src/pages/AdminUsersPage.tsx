@@ -146,15 +146,30 @@ function CreateEditModal({ user, onClose, onSaved }: CreateEditModalProps) {
 interface ConfirmToggleModalProps {
   user: AdminUser;
   onClose: () => void;
-  onConfirm: () => void;
-  loading: boolean;
+  onSaved: () => void;
 }
 
-function ConfirmToggleModal({ user, onClose, onConfirm, loading }: ConfirmToggleModalProps) {
+function ConfirmToggleModal({ user, onClose, onSaved }: ConfirmToggleModalProps) {
   const isActive = user.isActive;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleConfirm = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await adminApi.toggleActive(user.id);
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update status.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={styles.modalOverlay} onClick={onClose}>
-      <div style={{ ...styles.modal, maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+      <div style={{ ...styles.modal, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
         <div style={styles.modalHeader}>
           <h2 style={styles.modalTitle}>
             {isActive ? "Deactivate User" : "Activate User"}
@@ -166,6 +181,13 @@ function ConfirmToggleModal({ user, onClose, onConfirm, loading }: ConfirmToggle
             ? `Are you sure you want to deactivate ${user.name}? They will no longer be able to log in.`
             : `Are you sure you want to activate ${user.name}? They will be able to log in again.`}
         </p>
+
+        {error && (
+          <div style={{ ...styles.errorCallout, marginBottom: "1rem" }}>
+            ⚠️ {error}
+          </div>
+        )}
+
         <div style={styles.modalActions}>
           <button style={styles.cancelBtn} onClick={onClose} disabled={loading}>
             Cancel
@@ -176,7 +198,7 @@ function ConfirmToggleModal({ user, onClose, onConfirm, loading }: ConfirmToggle
               background: isActive ? "#C0392B" : "#2D7A5B",
               opacity: loading ? 0.7 : 1,
             }}
-            onClick={onConfirm}
+            onClick={handleConfirm}
             disabled={loading}
           >
             {loading
@@ -327,8 +349,7 @@ export default function AdminUsersPage() {
         <ConfirmToggleModal
           user={toggleUser}
           onClose={() => setToggleUser(null)}
-          onConfirm={handleToggleActive}
-          loading={toggleLoading}
+          onSaved={() => { setToggleUser(null); fetchUsers(); }}
         />
       )}
       {resetUser && (
