@@ -51,32 +51,44 @@ function AppInner() {
     // Parse URL to restore deep-link
     const path = window.location.pathname;
 
-    if (user.role === "IT_Staff" || user.role === "Administrator") {
-      const matchItDetail = path.match(/^\/it-staff\/tickets\/(\d+)$/);
-      if (matchItDetail) {
-        setPage({ name: "it-detail", ticketId: parseInt(matchItDetail[1], 10) });
-        setInitialized(true);
-        return;
-      }
-      if (user.role === "Administrator" && path.startsWith("/admin")) {
-        setPage({ name: "admin-users" });
-        setInitialized(true);
-        return;
-      }
+    if (path.startsWith("/admin")) {
+      setPage({ name: "admin-users" });
+      setInitialized(true);
+      return;
+    }
+
+    const matchItDetail = path.match(/^\/it-staff\/tickets\/(\d+)$/);
+    if (matchItDetail) {
+      setPage({ name: "it-detail", ticketId: parseInt(matchItDetail[1], 10) });
+      setInitialized(true);
+      return;
+    }
+
+    if (path.startsWith("/it-staff")) {
+      setPage({ name: "it-queue" });
+      setInitialized(true);
+      return;
+    }
+
+    const matchDetail = path.match(/^\/tickets\/(\d+)$/);
+    if (matchDetail) {
+      setPage({ name: "detail", ticketId: parseInt(matchDetail[1], 10) });
+      setInitialized(true);
+      return;
+    }
+
+    if (path === "/tickets/new") {
+      setPage({ name: "create" });
+      setInitialized(true);
+      return;
+    }
+
+    // Default dashboard based on role
+    if (user.role === "Administrator") {
+      setPage({ name: "admin-users" });
+    } else if (user.role === "IT_Staff") {
       setPage({ name: "it-queue" });
     } else {
-      // Requester
-      const matchDetail = path.match(/^\/tickets\/(\d+)$/);
-      if (matchDetail) {
-        setPage({ name: "detail", ticketId: parseInt(matchDetail[1], 10) });
-        setInitialized(true);
-        return;
-      }
-      if (path === "/tickets/new") {
-        setPage({ name: "create" });
-        setInitialized(true);
-        return;
-      }
       setPage({ name: "list" });
     }
     setInitialized(true);
@@ -87,16 +99,16 @@ function AppInner() {
     const onPop = () => {
       if (!user) return;
       const path = window.location.pathname;
-      if (user.role === "IT_Staff" || user.role === "Administrator") {
-        const m = path.match(/^\/it-staff\/tickets\/(\d+)$/);
-        if (m) { setPage({ name: "it-detail", ticketId: parseInt(m[1], 10) }); return; }
-        setPage({ name: "it-queue" });
-      } else {
-        const m = path.match(/^\/tickets\/(\d+)$/);
-        if (m) { setPage({ name: "detail", ticketId: parseInt(m[1], 10) }); return; }
-        if (path === "/tickets/new") { setPage({ name: "create" }); return; }
-        setPage({ name: "list" });
-      }
+      if (path.startsWith("/admin")) { setPage({ name: "admin-users" }); return; }
+      const mIt = path.match(/^\/it-staff\/tickets\/(\d+)$/);
+      if (mIt) { setPage({ name: "it-detail", ticketId: parseInt(mIt[1], 10) }); return; }
+      if (path.startsWith("/it-staff")) { setPage({ name: "it-queue" }); return; }
+      const m = path.match(/^\/tickets\/(\d+)$/);
+      if (m) { setPage({ name: "detail", ticketId: parseInt(m[1], 10) }); return; }
+      if (path === "/tickets/new") { setPage({ name: "create" }); return; }
+      if (user.role === "Administrator") setPage({ name: "admin-users" });
+      else if (user.role === "IT_Staff") setPage({ name: "it-queue" });
+      else setPage({ name: "list" });
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -270,11 +282,27 @@ function renderWithNav(
 
 function ForbiddenPage() {
   return (
-    <div style={{ padding: "4rem 2rem", textAlign: "center" }}>
-      <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🚫</div>
-      <h1 style={{ color: "#C0392B", fontFamily: "'Inter','Outfit',sans-serif" }}>403 — Forbidden</h1>
-      <p style={{ color: "#6B7C74", fontFamily: "'Inter','Outfit',sans-serif" }}>
-        You don&apos;t have permission to view this page.
+    <div style={{ padding: "5rem 2rem", textAlign: "center", maxWidth: 520, margin: "0 auto" }}>
+      <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>🚫</div>
+      <span
+        style={{
+          display: "inline-block",
+          padding: "4px 14px",
+          borderRadius: 999,
+          background: "#FDEDEC",
+          color: "#C0392B",
+          fontWeight: 700,
+          fontSize: "0.875rem",
+          marginBottom: "1rem",
+        }}
+      >
+        HTTP 403 FORBIDDEN
+      </span>
+      <h1 style={{ color: "#1A2E26", fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.5rem", fontFamily: "'Inter','Outfit',sans-serif" }}>
+        Access Denied
+      </h1>
+      <p style={{ color: "#6B7C74", marginBottom: "1.5rem", lineHeight: 1.6, fontFamily: "'Inter','Outfit',sans-serif" }}>
+        You don&apos;t have permission to view this page. This resource is restricted.
       </p>
     </div>
   );
