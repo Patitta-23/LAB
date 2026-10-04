@@ -132,6 +132,24 @@ app.post("/api/tickets", upload.array("attachments", 5), async (req: Request, re
       include: { category: true },
     });
 
+    // Also sync to Lab3Ticket so IT Staff queue sees real-time requester tickets
+    try {
+      const user = await getPrisma().user.findUnique({ where: { id: requesterId } });
+      if (user) {
+        await getPrisma().lab3Ticket.create({
+          data: {
+            title: String(title).trim(),
+            description: String(description).trim(),
+            categoryId: parseInt(categoryId),
+            requesterId: user.id,
+            status: "OPEN",
+          },
+        });
+      }
+    } catch {
+      // ignore if user model doesn't match legacy requester id
+    }
+
     res.status(201).json(ticket);
   } catch {
     res.status(500).json({ error: "Internal server error" });

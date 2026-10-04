@@ -68,6 +68,82 @@ async function main() {
     });
   }
   console.log(`✓ Seeded ${users.length} Lab 3 users (password: "${DEFAULT_PASSWORD}").`);
+
+  // --- Lab 3: Sample Tickets ---
+  const alice = await prisma.user.findUnique({ where: { email: "alice@toktickit.com" } });
+  const bob = await prisma.user.findUnique({ where: { email: "bob@toktickit.com" } });
+  const eve = await prisma.user.findUnique({ where: { email: "eve@toktickit.com" } });
+  const frank = await prisma.user.findUnique({ where: { email: "frank@toktickit.com" } });
+  const hardware = await prisma.category.findUnique({ where: { name: "Hardware" } });
+  const network = await prisma.category.findUnique({ where: { name: "Network" } });
+  const software = await prisma.category.findUnique({ where: { name: "Software" } });
+  const access = await prisma.category.findUnique({ where: { name: "Account and Access" } });
+
+  if (alice && bob && eve && frank && hardware && network && software && access) {
+    const sampleTickets = [
+      {
+        title: "หน้าจอดับ เปิดไม่ติด (External Monitor Issue)",
+        description: "จอต่อแยกที่โต๊ะทำงานเปิดไม่ติด ไฟแสดงสถานะไม่ขึ้น ลองขยับสายไฟแล้วยังไม่ทำงาน",
+        categoryId: hardware.id,
+        requesterId: alice.id,
+        status: "OPEN" as const,
+        itPriority: "HIGH" as const,
+      },
+      {
+        title: "VPN Connection timeout when working from home",
+        description: "Cannot connect to company VPN from home network. Error code 800.",
+        categoryId: network.id,
+        requesterId: alice.id,
+        assignedStaffId: eve.id,
+        status: "IN_PROGRESS" as const,
+        itPriority: "MEDIUM" as const,
+      },
+      {
+        title: "Request Adobe Acrobat Pro license for quarterly reporting",
+        description: "Need Adobe Acrobat Pro license to edit and export PDF financial reports.",
+        categoryId: software.id,
+        requesterId: bob.id,
+        status: "OPEN" as const,
+        itPriority: "LOW" as const,
+      },
+      {
+        title: "Account unlock and MFA reset for ERP portal",
+        description: "Changed mobile phone and cannot access Authenticator app.",
+        categoryId: access.id,
+        requesterId: alice.id,
+        assignedStaffId: frank.id,
+        status: "RESOLVED" as const,
+        itPriority: "MEDIUM" as const,
+      },
+    ];
+
+    for (const st of sampleTickets) {
+      const existing = await prisma.lab3Ticket.findFirst({
+        where: { title: st.title, requesterId: st.requesterId },
+      });
+      if (!existing) {
+        const created = await prisma.lab3Ticket.create({ data: st });
+        // Also add a sample public comment and internal note on ticket 2
+        if (st.status === "IN_PROGRESS" && eve) {
+          await prisma.publicComment.create({
+            data: {
+              ticketId: created.id,
+              authorId: eve.id,
+              content: "Hello Alice, I have verified your VPN certificate. Please try reconnecting now.",
+            },
+          });
+          await prisma.internalNote.create({
+            data: {
+              ticketId: created.id,
+              authorId: eve.id,
+              content: "Internal: Gateway 10.0.4.1 routing table reset by network team.",
+            },
+          });
+        }
+      }
+    }
+    console.log("✓ Seeded sample Lab 3 tickets & notes.");
+  }
   console.log("✓ Seed complete.");
 }
 
