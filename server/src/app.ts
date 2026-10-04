@@ -63,8 +63,9 @@ const upload = multer({
   },
 });
 
-// Helper: parse X-Requester-Id header
+// Helper: parse X-Requester-Id header or authenticated session (Lab 3)
 function getRequesterId(req: Request): number | null {
+  if (req.session?.userId) return req.session.userId;
   const id = parseInt(String(req.headers["x-requester-id"]), 10);
   return isNaN(id) ? null : id;
 }
