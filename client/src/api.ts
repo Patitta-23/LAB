@@ -75,6 +75,7 @@ export interface Lab3Ticket {
 
 export interface PublicComment {
   id: number;
+  type: "PUBLIC" | "INTERNAL";
   author: { id: number; name: string; role: UserRole };
   content: string;
   createdAt: string;
@@ -82,6 +83,7 @@ export interface PublicComment {
 
 export interface InternalNote {
   id: number;
+  type?: "INTERNAL";
   author: { id: number; name: string; role: UserRole };
   content: string;
   createdAt: string;
@@ -349,14 +351,16 @@ export const itStaffApi = {
 // ── Lab 3 — Comments API ───────────────────────────────────────────────
 
 export const commentsApi = {
+  /** Get all comments (PUBLIC + INTERNAL for IT Staff/Admin; PUBLIC only for Requester) */
   async getComments(ticketId: number): Promise<{ comments: PublicComment[] }> {
     return apiFetch(`/api/tickets/${ticketId}/comments`);
   },
 
-  async addComment(ticketId: number, content: string): Promise<{ comment: PublicComment }> {
+  /** Post a comment — type "PUBLIC" (default) or "INTERNAL" (IT Staff/Admin only) */
+  async addComment(ticketId: number, content: string, type: "PUBLIC" | "INTERNAL" = "PUBLIC"): Promise<{ comment: PublicComment }> {
     return apiFetch(`/api/tickets/${ticketId}/comments`, {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, type }),
     });
   },
 

@@ -185,7 +185,8 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
     if (!newComment.trim() || !ticket) return;
     setCommentSending(true);
     try {
-      await commentsApi.addComment(ticket.id, newComment.trim());
+      // IT Staff posts as PUBLIC by default (user can toggle via commentType state)
+      await commentsApi.addComment(ticket.id, newComment.trim(), "PUBLIC");
       setNewComment("");
       await loadTicket();
     } catch {
@@ -199,7 +200,8 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
     if (!newNote.trim() || !ticket) return;
     setNoteSending(true);
     try {
-      await itStaffApi.addNote(ticket.id, newNote.trim());
+      // IT Staff posts Internal Note via unified comments endpoint with type=INTERNAL
+      await commentsApi.addComment(ticket.id, newNote.trim(), "INTERNAL");
       setNewNote("");
       await loadTicket();
     } catch {

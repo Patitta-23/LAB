@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  TicketDetail, Attachment, TicketStatus,
-  fetchTicketById, deleteAttachment, getDownloadUrl, uploadAttachments, formatTicketNumber
+  TicketDetail, Attachment, TicketStatus, PublicComment,
+  fetchTicketById, deleteAttachment, getDownloadUrl, uploadAttachments, formatTicketNumber,
+  commentsApi,
 } from "../api";
 
 interface Props {
@@ -11,8 +12,10 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
-  OPEN: "New", IN_PROGRESS: "In Progress", RESOLVED: "Resolved", CLOSED: "Closed",
+  OPEN: "New", IN_PROGRESS: "In Progress", PENDING: "Pending", RESOLVED: "Resolved", CLOSED: "Closed",
 };
+
+const RESOLVABLE_STATUSES: TicketStatus[] = ["IN_PROGRESS", "PENDING", "RESOLVED"];
 
 const ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -135,6 +138,18 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Comments state ─────────────────────────────────────────────────
+  const [comments,       setComments]       = useState<PublicComment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newComment,     setNewComment]     = useState("");
+  const [commentSending, setCommentSending] = useState(false);
+  const [commentError,   setCommentError]   = useState("");
+
+  // ── Resolve state ──────────────────────────────────────────────────
+  const [showResolveConfirm, setShowResolveConfirm] = useState(false);
+  const [resolving,          setResolving]           = useState(false);
+  const [resolveError,       setResolveError]        = useState("");
+
   useEffect(() => {
     load();
   }, [requesterId, ticketId]);
@@ -152,6 +167,22 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
     }
   }
 
+  async function loadComments() {
+    setCommentsLoading(true);
+    try {
+      const res = await commentsApi.getComments(ticketId);
+      setComments(res.comments);
+    } catch {
+      // Silently fail — comments are supplementary
+    } finally {
+      setCommentsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (ticketId) loadComments();
+  }, [ticketId]);
+
   async function handleRemove(reason: string) {
     if (!removing) return;
     await deleteAttachment(requesterId, removing.id, reason);
@@ -159,6 +190,39 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
     setSuccessMsg(`Attachment "${removing.filename}" removed.`);
     setTimeout(() => setSuccessMsg(""), 4000);
     await load();
+  }
+
+  async function handleAddComment() {
+    const trimmed = newComment.trim();
+    if (!trimmed) return;
+    setCommentSending(true);
+    setCommentError("");
+    try {
+      await commentsApi.addComment(ticketId, trimmed, "PUBLIC");
+      setNewComment("");
+      await loadComments();
+    } catch (e: any) {
+      setCommentError(e.message ?? "Failed to send comment.");
+    } finally {
+      setCommentSending(false);
+    }
+  }
+
+  async function handleResolve() {
+    setResolving(true);
+    setResolveError("");
+    try {
+      await commentsApi.resolveTicket(ticketId);
+      setShowResolveConfirm(false);
+      setSuccessMsg("Ticket marked as resolved.");
+      setTimeout(() => setSuccessMsg(""), 4000);
+      await load();
+    } catch (e: any) {
+      setResolveError(e.message ?? "Failed to resolve ticket.");
+      setShowResolveConfirm(false);
+    } finally {
+      setResolving(false);
+    }
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -552,6 +616,142 @@ export default function TicketDetailPage({ requesterId, ticketId, onBack }: Prop
           </div>
         </div>
       </div>
+
+      {/* ── Public Comments ─────────────────────────────────────────── */}
+      <div className="card" style={{ marginTop: "var(--space-5)" }}>
+        <div className="card-header">
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>
+            Comments
+          </h2>
+        </div>
+        <div className="card-body">
+          {commentsLoading ? (
+            <div style={{ padding: "var(--space-4)", color: "var(--color-text-secondary)", fontSize: 14 }}>Loading comments…</div>
+          ) : comments.length === 0 ? (
+            <div className="empty-state" style={{ padding: "var(--space-6) var(--space-4)" }}>
+              <div className="empty-icon">💬</div>
+              <div className="empty-title" style={{ fontSize: 14 }}>No comments yet</div>
+              <div className="empty-desc" style={{ fontSize: 13 }}>Be the first to leave a comment on this ticket.</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", marginBottom: "var(--space-4)" }}>
+              {comments.map((c) => (
+                <div
+                  key={c.id}
+                  id={`comment-${c.id}`}
+                  style={{
+                    background: "var(--color-bg-secondary)",
+                    borderRadius: "var(--radius-md)",
+                    padding: "var(--space-3) var(--space-4)",
+                    borderLeft: "3px solid var(--color-primary)",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--space-1)", flexWrap: "wrap", gap: 4 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: "var(--color-text-primary)" }}>
+                      {c.author.name}
+                    </span>
+                    <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                      {formatDateTime(c.createdAt)}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--color-text-primary)", whiteSpace: "pre-wrap" }}>{c.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add Comment Form */}
+          <div style={{ borderTop: comments.length > 0 ? "1px solid var(--color-border)" : "none", paddingTop: comments.length > 0 ? "var(--space-4)" : 0 }}>
+            <div className="form-group" style={{ marginBottom: "var(--space-2)" }}>
+              <label className="form-label" htmlFor="textarea-new-comment">Add a Comment</label>
+              <textarea
+                id="textarea-new-comment"
+                className={`form-control${commentError ? " error" : ""}`}
+                rows={3}
+                placeholder="Write your comment here…"
+                value={newComment}
+                onChange={(e) => { setNewComment(e.target.value); setCommentError(""); }}
+                disabled={commentSending}
+              />
+              {commentError && <span className="form-error">⚠ {commentError}</span>}
+            </div>
+            <button
+              id="btn-send-comment"
+              className="btn btn-primary btn-sm"
+              onClick={handleAddComment}
+              disabled={commentSending || !newComment.trim()}
+            >
+              {commentSending ? "Sending…" : "Send Comment"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Problem Appears Resolved ─────────────────────────────────── */}
+      {ticket && RESOLVABLE_STATUSES.includes(ticket.status) && (
+        <div
+          className="card"
+          style={{
+            marginTop: "var(--space-4)",
+            borderLeft: "4px solid var(--color-success, #16a34a)",
+            padding: "var(--space-4) var(--space-5)",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--space-3)" }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, color: "var(--color-text-primary)", marginBottom: 4 }}>
+                Problem Appears Resolved?
+              </div>
+              <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+                If your issue has been fixed, you can mark this ticket as resolved.
+              </div>
+            </div>
+            <button
+              id="btn-problem-resolved"
+              className="btn btn-sm"
+              style={{ background: "#16a34a", color: "white", border: "none", fontWeight: 600, minWidth: 160, borderRadius: "var(--radius-md)", padding: "var(--space-2) var(--space-4)", cursor: resolving ? "not-allowed" : "pointer", opacity: resolving ? 0.6 : 1 }}
+              onClick={() => setShowResolveConfirm(true)}
+              disabled={resolving}
+            >
+              ✓ Problem Appears Resolved
+            </button>
+          </div>
+          {resolveError && (
+            <div className="alert alert-error" style={{ marginTop: "var(--space-3)", marginBottom: 0 }}>⚠ {resolveError}</div>
+          )}
+        </div>
+      )}
+
+      {/* Resolve Confirm Dialog */}
+      {showResolveConfirm && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="resolve-modal-title">
+          <div className="modal">
+            <div className="modal-header">
+              <h2 className="modal-title" id="resolve-modal-title">Confirm Resolution</h2>
+              <button className="modal-close" onClick={() => setShowResolveConfirm(false)} aria-label="Close">×</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 14, color: "var(--color-text-secondary)" }}>
+                Are you sure the problem has been resolved? This will mark the ticket as <strong>Resolved</strong>.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button id="btn-resolve-cancel" className="btn btn-ghost btn-sm" onClick={() => setShowResolveConfirm(false)} disabled={resolving}>
+                Cancel
+              </button>
+              <button
+                id="btn-resolve-confirm"
+                className="btn btn-sm"
+                style={{ background: "#16a34a", color: "white", border: "none", fontWeight: 600, borderRadius: "var(--radius-md)", padding: "var(--space-1) var(--space-4)", cursor: resolving ? "not-allowed" : "pointer", opacity: resolving ? 0.6 : 1 }}
+                onClick={handleResolve}
+                disabled={resolving}
+              >
+                {resolving ? "Resolving…" : "Yes, Mark Resolved"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Remove Modal */}
       {removing && (
