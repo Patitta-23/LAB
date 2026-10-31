@@ -7,6 +7,7 @@ import {
   type ItPriority,
   type PublicComment,
   type InternalNote,
+  type ItStaffUser,
 } from "../api";
 import { useAuth } from "../context/AuthContext";
 
@@ -14,7 +15,8 @@ import { useAuth } from "../context/AuthContext";
 
 const NEXT_STATUSES: Record<TicketStatus, TicketStatus[]> = {
   OPEN:        ["IN_PROGRESS"],
-  IN_PROGRESS: ["RESOLVED", "CLOSED"],
+  IN_PROGRESS: ["PENDING", "RESOLVED", "CLOSED"],
+  PENDING:     ["IN_PROGRESS", "RESOLVED"],
   RESOLVED:    ["CLOSED"],
   CLOSED:      [],
 };
@@ -22,6 +24,7 @@ const NEXT_STATUSES: Record<TicketStatus, TicketStatus[]> = {
 const STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: "Open",
   IN_PROGRESS: "In Progress",
+  PENDING: "Pending",
   RESOLVED: "Resolved",
   CLOSED: "Closed",
 };
@@ -29,6 +32,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 const STATUS_COLORS: Record<TicketStatus, { bg: string; color: string }> = {
   OPEN:        { bg: "#EAF4FE", color: "#1A6FAC" },
   IN_PROGRESS: { bg: "#FEF9E7", color: "#D4A017" },
+  PENDING:     { bg: "#FFF0E0", color: "#C06000" },
   RESOLVED:    { bg: "#E8F5EF", color: "#2D7A5B" },
   CLOSED:      { bg: "#F2F2F2", color: "#6B7C74" },
 };
@@ -77,6 +81,9 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
 
+  // IT Staff list for Reassign dropdown
+  const [itStaffList, setItStaffList] = useState<ItStaffUser[]>([]);
+
   // Comments / Notes
   const [newComment, setNewComment] = useState("");
   const [newNote, setNewNote] = useState("");
@@ -101,6 +108,13 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
 
   useEffect(() => { loadTicket(); }, [loadTicket]);
 
+  // Load IT Staff list for Reassign dropdown (AC-01, AC-02)
+  useEffect(() => {
+    itStaffApi.getItStaffUsers()
+      .then(setItStaffList)
+      .catch(() => setItStaffList([]));
+  }, []);
+
   const handleSave = async () => {
     if (!ticket) return;
     setSaving(true);
@@ -124,11 +138,30 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
   const handleClaim = async () => {
     if (!ticket) return;
     setClaiming(true);
+    setSaveError(null);
+    setSaveMsg(null);
     try {
-      await itStaffApi.claimTicket(ticket.id);
+      const result = await itStaffApi.claimTicket(ticket.id);
+      setSaveMsg(result.message);
       await loadTicket();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to claim.");
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const handleReassign = async (newAssigneeId: string) => {
+    if (!ticket || !newAssigneeId) return;
+    setClaiming(true);
+    setSaveError(null);
+    setSaveMsg(null);
+    try {
+      const result = await itStaffApi.reassignTicket(ticket.id, Number(newAssigneeId));
+      setSaveMsg(result.message);
+      await loadTicket();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to reassign.");
     } finally {
       setClaiming(false);
     }
@@ -345,7 +378,7 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
           <div style={styles.controlCard}>
             <h2 style={styles.controlTitle}>Manage Ticket</h2>
 
-            {/* Claim */}
+            {/* Claim / Reassign */}
             {!isAlreadyAssignedToMe && (
               <button
                 id="claim-ticket-btn"
@@ -360,25 +393,27 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
               <div style={styles.claimedBadge}>✅ Assigned to you</div>
             )}
 
-            {/* Assignee */}
+            {/* Assignee / Reassign dropdown */}
             <div style={styles.controlField}>
-              <label htmlFor="assignee-select" style={styles.controlLabel}>Assignee</label>
+              <label htmlFor="assignee-select" style={styles.controlLabel}>
+                {ticket.assignedStaff ? "Reassign To" : "Assign To"}
+              </label>
               <select
                 id="assignee-select"
                 value={selectedAssigneeId}
-                onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedAssigneeId(e.target.value);
+                  if (e.target.value) handleReassign(e.target.value);
+                }}
                 style={styles.controlSelect}
+                disabled={claiming}
               >
-                <option value="">Unassigned</option>
-                {/* Show current assignee at minimum */}
-                {ticket.assignedStaff && (
-                  <option value={String(ticket.assignedStaff.id)}>
-                    {ticket.assignedStaff.name}
+                <option value="">— Unassigned —</option>
+                {itStaffList.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.name}{s.id === user?.id ? " (me)" : ""}
                   </option>
-                )}
-                {user && !ticket.assignedStaff && (
-                  <option value={String(user.id)}>{user.name} (me)</option>
-                )}
+                ))}
               </select>
             </div>
 
