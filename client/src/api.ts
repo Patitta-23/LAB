@@ -324,6 +324,20 @@ export const itStaffApi = {
     return apiFetch<ItStaffUser[]>("/api/it-staff/users");
   },
 
+  async changeStatus(id: number, status: TicketStatus): Promise<{ id: number; status: string; updatedAt: string }> {
+    return apiFetch(`/api/it-staff/tickets/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async changePriority(id: number, itPriority: ItPriority): Promise<{ id: number; itPriority: string; updatedAt: string }> {
+    return apiFetch(`/api/it-staff/tickets/${id}/priority`, {
+      method: "PATCH",
+      body: JSON.stringify({ itPriority }),
+    });
+  },
+
   async addNote(ticketId: number, content: string): Promise<{ note: InternalNote }> {
     return apiFetch(`/api/it-staff/tickets/${ticketId}/notes`, {
       method: "POST",
