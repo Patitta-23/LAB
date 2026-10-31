@@ -7,14 +7,16 @@ export const itStaffRouter = Router();
 // Protect all IT Staff routes with IT_Staff or Administrator role guard
 itStaffRouter.use(requireAuth, requireRole("IT_Staff", "Administrator"));
 
-// Valid status transitions map per BR-10
+// Valid status transitions map per BR-05 (Lab 4) — includes PENDING
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  OPEN: ["IN_PROGRESS", "CANCELLED"],
-  IN_PROGRESS: ["RESOLVED", "CLOSED", "CANCELLED", "OPEN"],
-  RESOLVED: ["CLOSED", "IN_PROGRESS"],
-  CLOSED: ["IN_PROGRESS"], // Reopen if needed
-  CANCELLED: [],
+  OPEN:        ["IN_PROGRESS"],
+  IN_PROGRESS: ["PENDING", "RESOLVED", "CLOSED"],
+  PENDING:     ["IN_PROGRESS", "RESOLVED"],
+  RESOLVED:    ["CLOSED"],
+  CLOSED:      [],
 };
+
+const VALID_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 
 // ---------------------------------------------------------------------------
 // GET /api/it-staff/tickets
@@ -245,6 +247,110 @@ itStaffRouter.get("/users", async (_req: Request, res: Response): Promise<void> 
       orderBy: { name: "asc" },
     });
     res.status(200).json(staff);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/it-staff/tickets/:id/status
+// Change ticket status — IT_Staff ONLY, enforces state machine (BR-05, AC-05, AC-06)
+// ---------------------------------------------------------------------------
+itStaffRouter.patch("/tickets/:id/status", requireRole("IT_Staff"), async (req: Request, res: Response): Promise<void> => {
+  const ticketId = parseInt(req.params.id, 10);
+  if (isNaN(ticketId)) {
+    res.status(400).json({ error: "Invalid ticket ID.", code: "INVALID_ID" });
+    return;
+  }
+
+  const { status } = req.body;
+  if (!status || typeof status !== "string") {
+    res.status(422).json({ error: "status is required.", code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const allStatuses = ["OPEN", "IN_PROGRESS", "PENDING", "RESOLVED", "CLOSED"];
+  if (!allStatuses.includes(status)) {
+    res.status(422).json({ error: `Invalid status value: ${status}.`, code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const prisma = getPrisma();
+    const ticket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found.", code: "NOT_FOUND" });
+      return;
+    }
+
+    if (ticket.status === status) {
+      res.status(200).json({ id: ticket.id, status: ticket.status, updatedAt: ticket.updatedAt });
+      return;
+    }
+
+    const allowed = VALID_TRANSITIONS[ticket.status] ?? [];
+    if (!allowed.includes(status)) {
+      res.status(400).json({
+        error: `Invalid status transition from ${ticket.status} to ${status}.`,
+        code: "INVALID_TRANSITION",
+      });
+      return;
+    }
+
+    const updated = await prisma.lab3Ticket.update({
+      where: { id: ticketId },
+      data: { status: status as "OPEN" | "IN_PROGRESS" | "PENDING" | "RESOLVED" | "CLOSED" },
+      select: { id: true, status: true, updatedAt: true },
+    });
+
+    res.status(200).json({ id: updated.id, status: updated.status, updatedAt: updated.updatedAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/it-staff/tickets/:id/priority
+// Change IT Priority — IT_Staff + Administrator (BR-04, AC-04)
+// ---------------------------------------------------------------------------
+itStaffRouter.patch("/tickets/:id/priority", async (req: Request, res: Response): Promise<void> => {
+  const ticketId = parseInt(req.params.id, 10);
+  if (isNaN(ticketId)) {
+    res.status(400).json({ error: "Invalid ticket ID.", code: "INVALID_ID" });
+    return;
+  }
+
+  const { itPriority } = req.body;
+  if (!itPriority || typeof itPriority !== "string") {
+    res.status(422).json({ error: "itPriority is required.", code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  if (!(VALID_PRIORITIES as readonly string[]).includes(itPriority)) {
+    res.status(422).json({
+      error: `Invalid itPriority value: ${itPriority}. Must be one of ${VALID_PRIORITIES.join(", ")}.`,
+      code: "VALIDATION_ERROR",
+    });
+    return;
+  }
+
+  try {
+    const prisma = getPrisma();
+    const ticket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found.", code: "NOT_FOUND" });
+      return;
+    }
+
+    const updated = await prisma.lab3Ticket.update({
+      where: { id: ticketId },
+      data: { itPriority: itPriority as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" },
+      select: { id: true, itPriority: true, updatedAt: true },
+    });
+
+    res.status(200).json({ id: updated.id, itPriority: updated.itPriority, updatedAt: updated.updatedAt });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal server error." });

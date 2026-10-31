@@ -121,11 +121,25 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
     setSaveMsg(null);
     setSaveError(null);
     try {
-      await itStaffApi.patchTicket(ticket.id, {
-        status: selectedStatus || undefined,
-        itPriority: selectedPriority || undefined,
-        assignedStaffId: selectedAssigneeId ? Number(selectedAssigneeId) : undefined,
-      });
+      const promises: Promise<unknown>[] = [];
+
+      // Status change via dedicated endpoint (IT_Staff only)
+      if (selectedStatus && selectedStatus !== ticket.status) {
+        promises.push(itStaffApi.changeStatus(ticket.id, selectedStatus as TicketStatus));
+      }
+
+      // Priority change via dedicated endpoint
+      if (selectedPriority && selectedPriority !== ticket.itPriority) {
+        promises.push(itStaffApi.changePriority(ticket.id, selectedPriority as ItPriority));
+      }
+
+      if (promises.length === 0) {
+        setSaveMsg("No changes to save.");
+        setSaving(false);
+        return;
+      }
+
+      await Promise.all(promises);
       setSaveMsg("Changes saved successfully.");
       await loadTicket();
     } catch (err) {
