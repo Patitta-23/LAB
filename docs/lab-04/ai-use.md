@@ -17,6 +17,7 @@
 | 5 | **Branch 4 — Requester Actions + RBAC** | *"ทำ Branch 4 feature/lab4-requester-actions ต่อได้เลย"* | Created `feature/lab4-requester-actions` from Branch 3. Added `requester-actions.test.ts` (RAC-01..RAC-07, 7 tests) and `rbac-lab4.test.ts` (RBAC-L4-01..RBAC-L4-09, 9 tests). Pushed and opened PR #47. | Ran all 16 new tests → ✅. Verified all RBAC boundaries across all 4 branches. |
 | 6 | **Phase 3 — Role Restrictions & Safe Failure** | *"ลุยเลย"* | Added `code` fields to all error responses in `itStaffRoutes.ts` (INVALID_TRANSITION, VALIDATION_ERROR, INVALID_ASSIGNEE, UNAUTHENTICATED, NOT_FOUND). Unified comment section in `ItTicketDetailPage.tsx` with PUBLIC/INTERNAL toggle (FR-06). Added PENDING status badge to `ItQueuePage.tsx` and `TicketListPage.tsx`. Fixed `deleteMany` scope in 3 test files to prevent cross-test comment deletion. | Ran full test suite → 143/143 ✅. TypeScript `npx tsc --noEmit` → 0 errors on both client and server. Committed and pushed to `feature/lab4-requester-actions`. |
 | 7 | **Phase 4 — Direct API Authorization Evidence & Client UI Tests** | *"โอเค ทำ Phase 4: Direct API Authorization Evidence ต่อเลย"* | Created client test suites for Lab 4: `ItStaffTicketDetail.test.tsx` (UI-IT-01..06, 7 tests), `RequesterTicketDetail.test.tsx` (UI-REQ-01..06, 6 tests), and `CommentSection.test.tsx` (UI-CMT-01..05, 5 tests). Validated RBAC in UI (toggle visibility, resolve button visibility, status transition dropdown restrictions). Updated `tests.md` with full pass counts. | Ran client tests → 41/41 ✅ (18 Lab 4 tests + 23 previous). Ran full test suite: 184/184 ✅ (143 server + 41 client). TypeScript `npx tsc --noEmit` clean on both sides. |
+| 8 | **Phase 5 — Tests & Documentation Update** | *"ต่อ Phase 5: Tests & Documentation Update"* | Updated `reviewer.md` with active PR numbers (#41, #44, #45, #46, #47) and branch naming. Updated DoD in `specification.md` (AC-01..14 verified, server 143/143, client 41/41, regressions 0, specs committed). Verified end-to-end test execution across client and server. | Verified all documentation files in `docs/lab-04/` accurately reflect test metrics, PR statuses, and DoD completion. |
 
 ---
 
@@ -193,5 +194,29 @@
 - TypeScript check: 0 errors on both client and server ✅
 
 **Outcome:** ✅ Phase 4 complete. Direct API Authorization Evidence and Client UI Tests fully implemented and passing.
+
+---
+
+### Session 8 — 2026-11-01
+
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** Phase 5 — Tests & Documentation Update
+
+**What I asked the AI:**
+> "ต่อ Phase 5: Tests & Documentation Update"
+
+**What the AI did:**
+1. Updated `docs/lab-04/reviewer.md` with active PR tracking (#41, #44, #45, #46, #47) and canonical branch naming.
+2. Updated Definition of Done (DoD) in `docs/lab-04/specification.md` marking off completed milestones (AC-01..14 verified, server 143/143 tests passing, client 41/41 tests passing, zero regression, specs & AI log finalized).
+3. Synced `docs/lab-04/tests.md` with complete verification numbers.
+4. Committed and pushed all documentation updates to `feature/lab4-requester-actions`.
+
+**What I verified:**
+- All 6 documentation files in `docs/lab-04/` are consistent and up-to-date.
+- Total test coverage across system stands at 184/184 tests (100% passing).
+- Repository is clean and in full readiness for peer review approval.
+
+**Outcome:** ✅ Phase 5 complete. Documentation and DoD fully updated and synchronized.
+
 
 

@@ -160,12 +160,12 @@ OPEN ──────────────────────► IN_PR
 
 ## 7. Definition of Done (DoD)
 
-- [ ] All Acceptance Criteria (AC-01 to AC-14) verified and tested.
-- [ ] All new server tests pass (`npm test` in `/server`).
-- [ ] All client tests pass (`npm test` in `/client`).
-- [ ] No regression in existing Lab 2 / Lab 3 tests.
-- [ ] Spec documents complete and committed to `docs/lab-04/`.
-- [ ] `ai-use.md` updated with all AI-assisted sessions.
+- [x] All Acceptance Criteria (AC-01 to AC-14) verified and tested.
+- [x] All new server tests pass (`npm test` in `/server` — 143/143 passing).
+- [x] All client tests pass (`npm test` in `/client` — 41/41 passing).
+- [x] No regression in existing Lab 2 / Lab 3 tests.
+- [x] Spec documents complete and committed to `docs/lab-04/`.
+- [x] `ai-use.md` updated with all AI-assisted sessions.
 - [ ] Peer review completed by `@nannaphatkn`.
 - [ ] All feature branches merged to `lab4-staging` via PR.
 - [ ] `lab4-staging` merged to `main` via final PR.

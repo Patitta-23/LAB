@@ -14,12 +14,12 @@
 
 | PR # | Branch | Target | Title | Status |
 |------|--------|--------|-------|--------|
-| TBD | `feat/lab4-spec` | `lab4-staging` | docs(lab-04): add specification, api-spec, ui-spec, tests, reviewer, ai-use | ⏳ Pending |
-| TBD | `feat/lab4-claim-reassign` | `lab4-staging` | feat(lab4): claim and reassign ticket endpoint + UI | ⏳ Pending |
-| TBD | `feat/lab4-status-priority` | `lab4-staging` | feat(lab4): status transition and IT priority change | ⏳ Pending |
-| TBD | `feat/lab4-comments` | `lab4-staging` | feat(lab4): public comments and internal notes | ⏳ Pending |
-| TBD | `feat/lab4-requester-actions` | `lab4-staging` | feat(lab4): requester resolve button + RBAC evidence | ⏳ Pending |
-| TBD | `lab4-staging` | `main` | chore: merge lab4-staging to main | ⏳ Pending |
+| #41 | `feature/lab4-spec` | `lab4-staging` | docs(lab-04): add specification, api-spec, ui-spec, tests, reviewer, ai-use | ⏳ Pending Review |
+| #44 | `feature/lab4-claim-reassign` | `lab4-staging` | feat(lab4): claim and reassign ticket endpoint + UI | ⏳ Pending Review |
+| #45 | `feature/lab4-status-priority` | `lab4-staging` | feat(lab4): status transition and IT priority change | ⏳ Pending Review |
+| #46 | `feature/lab4-comments` | `lab4-staging` | feat(lab4): public comments and internal notes | ⏳ Pending Review |
+| #47 | `feature/lab4-requester-actions` | `lab4-staging` | feat(lab4): requester resolve button + RBAC evidence | ⏳ Pending Review |
+| TBD | `lab4-staging` | `main` | chore: merge lab4-staging to main | ⏳ Awaiting Feature Merges |
 
 ---
 
