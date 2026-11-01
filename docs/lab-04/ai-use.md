@@ -218,5 +218,21 @@
 
 **Outcome:** ✅ Phase 5 complete. Documentation and DoD fully updated and synchronized.
 
+---
+
+## 💡 My Reflection: การใช้ AI ในบทบาท Specification Agent และ Coding Agent
+
+### 1. AI ในบทบาท Specification Agent (การออกแบบและวางข้อกำหนดระบบ)
+- **จุดเด่นและประโยชน์:** การใช้ AI ช่วยแปลงความต้องการระดับสูง (High-level Requirements) จากโจทย์ทางธุรกิจให้กลายเป็นข้อกำหนดทางวิศวกรรมซอฟต์แวร์ที่รัดกุมและเป็นรูปธรรม เช่น การจัดทำ Business Rules (BR-01..14), Acceptance Criteria (AC-01..14), Finite State Machine สำหรับสถานะ Ticket, และ Role-Based Access Control (RBAC) Matrix ทำให้การออกแบบครอบคลุมข้อยกเว้นและ Edge Cases สำคัญล่วงหน้า (อาทิ สิทธิ์การมองเห็น Internal Notes ที่ Requester ต้องไม่เห็น, การป้องกัน IDOR ใน Action Resolve, และพฤติกรรม Idempotent) ช่วยป้องกันปัญหา Scope Creep หรือการต้องแก้สถาปัตยกรรมกลางคัน
+- **บทบาทของผู้พัฒนา (Human-in-the-Loop):** วิศวกรต้องทำหน้าที่เป็นผู้ตัดสินใจเชิงระบบ (System Architect) โดยตรวจสอบว่า Spec ที่ AI ร่างขึ้นนั้นสอดคล้องกับสถาปัตยกรรม Schema ฐานข้อมูลเดิม (Prisma / PostgreSQL) และกำหนดขอบเขตไม่ให้ AI นิยามฟังก์ชันที่ซับซ้อนเกินความจำเป็นของ Sprint
+
+### 2. AI ในบทบาท Coding Agent (การพัฒนาโค้ดและชุดทดสอบอัตโนมัติ)
+- **จุดเด่นและประโยชน์:** AI สามารถแปลง Spec ที่ชัดเจนมาเป็นโค้ดและชุดทดสอบอัตโนมัติ (Automated Tests) ตามแนวทาง Test-Driven Development (TDD) ได้อย่างรวดเร็วและแม่นยำ ครอบคลุมทั้ง Unit, Integration, UI และ RBAC Authorization Tests (รวม 184 tests ผ่าน 100%) นอกจากนี้ยังช่วยวิเคราะห์และแก้ไขปัญหาเชิงลึกได้อย่างมีประสิทธิภาพ เช่น การตรวจพบและแก้ไขปัญหา Concurrency Data Collision ระหว่างรัน Vitest แบบคู่ขนาน (การสโคป `deleteMany` แทน global truncate) และการจัดการ Safe Failure ไม่ให้เซิร์ฟเวอร์คืน Stack Trace รั่วไหล
+- **บทบาทของผู้พัฒนา (Human-in-the-Loop):** วิศวกรต้องไม่ไว้วางใจผลลัพธ์ของ AI โดยปราศจากการตรวจสอบ แต่ต้องรันคำสั่งทดสอบจริงบน Terminal ทุกครั้ง ตรวจสอบ Coverage, ควบคุมระเบียบวินัยของ Git Branching, ตรวจสอบ Code Review / Feedback จาก Peer Reviewer, และแก้ไข Merge Conflicts เพื่อให้มั่นใจว่าโค้ดมีความปลอดภัย ไม่เกิด Regression และเป็นไปตาม Definition of Done (DoD) อย่างแท้จริง
+
+### 3. บทสรุปภาพรวม (Key Takeaway)
+การผสาน AI ทั้งสองบทบาทร่วมกับการกำกับดูแลของมนุษย์ (Spec-First Approach) แสดงให้เห็นว่า คุณภาพและความแม่นยำของโค้ดที่ Coding Agent สร้างขึ้นขึ้นอยู่กับความสมบูรณ์รัดกุมของเอกสารที่ Specification Agent กำหนดไว้ตั้งแต่ต้นโดยตรง การทำงานเป็นลำดับขั้นเช่นนี้ช่วยลดเวลาในการ Debugging เพิ่มความมั่นใจในการส่งมอบงาน และสร้างซอฟต์แวร์ที่มีความน่าเชื่อถือสูงตามมาตรฐานสากล
+
+
 
 
