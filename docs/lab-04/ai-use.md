@@ -16,6 +16,7 @@
 | 4 | **Branch 3 — Comments** | *"ทำ Branch 3 feature/lab4-comments ได้เลย"* | Created `feature/lab4-comments` from Branch 2. Implemented `POST /api/tickets/:id/comments` (PUBLIC/INTERNAL with RBAC), `GET /api/tickets/:id/comments` (merged chronological view with role filtering), `POST /api/tickets/:id/resolve` (Requester only, IDOR guard). Wrote 23 vitest tests (CMT-01..CMT-10, RSLV-01..RSLV-06+). Pushed and opened PR #46. | Ran all 23 comment tests → ✅. Verified Requester cannot post INTERNAL (CMT-04), IDOR on resolve (RSLV-05), idempotent resolve (RSLV-01c). |
 | 5 | **Branch 4 — Requester Actions + RBAC** | *"ทำ Branch 4 feature/lab4-requester-actions ต่อได้เลย"* | Created `feature/lab4-requester-actions` from Branch 3. Added `requester-actions.test.ts` (RAC-01..RAC-07, 7 tests) and `rbac-lab4.test.ts` (RBAC-L4-01..RBAC-L4-09, 9 tests). Pushed and opened PR #47. | Ran all 16 new tests → ✅. Verified all RBAC boundaries across all 4 branches. |
 | 6 | **Phase 3 — Role Restrictions & Safe Failure** | *"ลุยเลย"* | Added `code` fields to all error responses in `itStaffRoutes.ts` (INVALID_TRANSITION, VALIDATION_ERROR, INVALID_ASSIGNEE, UNAUTHENTICATED, NOT_FOUND). Unified comment section in `ItTicketDetailPage.tsx` with PUBLIC/INTERNAL toggle (FR-06). Added PENDING status badge to `ItQueuePage.tsx` and `TicketListPage.tsx`. Fixed `deleteMany` scope in 3 test files to prevent cross-test comment deletion. | Ran full test suite → 143/143 ✅. TypeScript `npx tsc --noEmit` → 0 errors on both client and server. Committed and pushed to `feature/lab4-requester-actions`. |
+| 7 | **Phase 4 — Direct API Authorization Evidence & Client UI Tests** | *"โอเค ทำ Phase 4: Direct API Authorization Evidence ต่อเลย"* | Created client test suites for Lab 4: `ItStaffTicketDetail.test.tsx` (UI-IT-01..06, 7 tests), `RequesterTicketDetail.test.tsx` (UI-REQ-01..06, 6 tests), and `CommentSection.test.tsx` (UI-CMT-01..05, 5 tests). Validated RBAC in UI (toggle visibility, resolve button visibility, status transition dropdown restrictions). Updated `tests.md` with full pass counts. | Ran client tests → 41/41 ✅ (18 Lab 4 tests + 23 previous). Ran full test suite: 184/184 ✅ (143 server + 41 client). TypeScript `npx tsc --noEmit` clean on both sides. |
 
 ---
 
@@ -165,4 +166,32 @@
 - Docker postgres restart policy set to `unless-stopped` to prevent future DB outages.
 
 **Outcome:** ✅ Phase 3 complete. All code structured for error safety with no stack trace leakage.
+
+---
+
+### Session 7 — 2026-11-01
+
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** Phase 4 — Direct API Authorization Evidence & Client UI Tests
+
+**What I asked the AI:**
+> "โอเค ทำ Phase 4: Direct API Authorization Evidence ต่อเลย"
+
+**What the AI did:**
+1. Implemented client unit/integration tests for Lab 4:
+   - `client/tests/lab-04/ItStaffTicketDetail.test.tsx` (UI-IT-01..06, 7 tests): verified title/badges render, Claim button appears when unassigned, "Assigned to you" badge appears when claimed, priority dropdown offers 4 valid levels, status dropdown only allows valid next transitions (OPEN → only IN_PROGRESS), and unified comment thread renders internal notes with lock badge.
+   - `client/tests/lab-04/RequesterTicketDetail.test.tsx` (UI-REQ-01..06, 6 tests): verified title/category/status, "Problem Appears Resolved" button rendered when active (IN_PROGRESS) and hidden when terminal (CLOSED), Internal Note toggle absent, internal notes not visible, and confirmation modal appears before calling `/resolve` API.
+   - `client/tests/lab-04/CommentSection.test.tsx` (UI-CMT-01..05, 5 tests): verified public comment render, IT Staff sees toggle buttons, Requester has no toggle, empty submission is disabled, and valid text submission clears input.
+2. Verified all 41 client tests pass (18 Lab 4 + 23 previous).
+3. Verified all 143 server tests pass (including RBAC evidence suite `rbac-lab4.test.ts`). Total: 184/184 tests pass across the entire codebase.
+4. Updated `docs/lab-04/tests.md` with final test counts.
+
+**What I verified:**
+- Client tests: 41 / 41 passing ✅
+- Server tests: 143 / 143 passing ✅
+- Total test suite: 184 / 184 passing ✅
+- TypeScript check: 0 errors on both client and server ✅
+
+**Outcome:** ✅ Phase 4 complete. Direct API Authorization Evidence and Client UI Tests fully implemented and passing.
+
 
