@@ -166,6 +166,6 @@ OPEN ──────────────────────► IN_PR
 - [x] No regression in existing Lab 2 / Lab 3 tests.
 - [x] Spec documents complete and committed to `docs/lab-04/`.
 - [x] `ai-use.md` updated with all AI-assisted sessions.
-- [ ] Peer review completed by `@nannaphatkn`.
-- [ ] All feature branches merged to `lab4-staging` via PR.
-- [ ] `lab4-staging` merged to `main` via final PR.
+- [x] Peer review completed by `@nannaphatkn`.
+- [x] All feature branches merged to `lab4-staging` via PR.
+- [x] `lab4-staging` merged to `main` via final PR.
