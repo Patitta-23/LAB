@@ -11,7 +11,11 @@
 | # | Task Phase / Scope | User Prompt (Key Request) | AI Generated Output / Action | Student Verification & Outcome |
 |---|---|---|---|---|
 | 1 | **Spec-Driven Setup** | *"เริ่ม Phase 0 ได้เลย"* | Generated `lab4-staging` branch, created `docs/lab-04/` with 6 files: `specification.md` (BR-01..BR-14, FR-01..FR-10, AC-01..AC-14, Role Matrix, State Machine, DoD), `api-spec.md` (8 endpoints with full request/response/error specs), `ui-spec.md` (2 page layouts, 7 components), `tests.md` (50+ test cases across 8 files), `reviewer.md`, `ai-use.md`. Also created `feat/lab4-spec` branch and committed all docs. | Reviewed all spec content against Lab 4 image requirements; verified branch structure and commit history. |
-| 2 | _(to be filled)_ | | | |
+| 2 | **Branch 1 — Claim/Reassign** | *"สร้าง Branch 1 feature/lab4-claim-reassign ได้เลย"* | Created `feature/lab4-claim-reassign` from `lab4-staging`. Implemented `POST /api/it-staff/tickets/:id/claim`, `PATCH /api/it-staff/tickets/:id/reassign`, `GET /api/it-staff/users` endpoints in `itStaffRoutes.ts`. Wrote 13 vitest tests (CLM-01..CLM-13). Pushed and opened PR #44. | Ran `npx vitest run tests/lab-04/claim-reassign.test.ts` → 13/13 ✅. Verified claim auto-sets status to IN_PROGRESS, reassign rejects non-IT-Staff users. |
+| 3 | **Branch 2 — Status/Priority** | *"ทำ Branch 2 feature/lab4-status-priority ได้เลย"* | Created `feature/lab4-status-priority` from Branch 1. Implemented `PATCH /api/it-staff/tickets/:id/status` (state machine: OPEN→IN_PROGRESS, IN_PROGRESS→PENDING/RESOLVED/CLOSED, PENDING→IN_PROGRESS/RESOLVED, RESOLVED→CLOSED) and `PATCH /api/it-staff/tickets/:id/priority` (IT Staff + Admin only). Wrote 23 vitest tests (STS-01..STS-23). Pushed and opened PR #45. | Ran `npx vitest run tests/lab-04/status-transition.test.ts` → 23/23 ✅. Verified INVALID_TRANSITION 400, VALIDATION_ERROR 422, role restrictions 403. |
+| 4 | **Branch 3 — Comments** | *"ทำ Branch 3 feature/lab4-comments ได้เลย"* | Created `feature/lab4-comments` from Branch 2. Implemented `POST /api/tickets/:id/comments` (PUBLIC/INTERNAL with RBAC), `GET /api/tickets/:id/comments` (merged chronological view with role filtering), `POST /api/tickets/:id/resolve` (Requester only, IDOR guard). Wrote 23 vitest tests (CMT-01..CMT-10, RSLV-01..RSLV-06+). Pushed and opened PR #46. | Ran all 23 comment tests → ✅. Verified Requester cannot post INTERNAL (CMT-04), IDOR on resolve (RSLV-05), idempotent resolve (RSLV-01c). |
+| 5 | **Branch 4 — Requester Actions + RBAC** | *"ทำ Branch 4 feature/lab4-requester-actions ต่อได้เลย"* | Created `feature/lab4-requester-actions` from Branch 3. Added `requester-actions.test.ts` (RAC-01..RAC-07, 7 tests) and `rbac-lab4.test.ts` (RBAC-L4-01..RBAC-L4-09, 9 tests). Pushed and opened PR #47. | Ran all 16 new tests → ✅. Verified all RBAC boundaries across all 4 branches. |
+| 6 | **Phase 3 — Role Restrictions & Safe Failure** | *"ลุยเลย"* | Added `code` fields to all error responses in `itStaffRoutes.ts` (INVALID_TRANSITION, VALIDATION_ERROR, INVALID_ASSIGNEE, UNAUTHENTICATED, NOT_FOUND). Unified comment section in `ItTicketDetailPage.tsx` with PUBLIC/INTERNAL toggle (FR-06). Added PENDING status badge to `ItQueuePage.tsx` and `TicketListPage.tsx`. Fixed `deleteMany` scope in 3 test files to prevent cross-test comment deletion. | Ran full test suite → 143/143 ✅. TypeScript `npx tsc --noEmit` → 0 errors on both client and server. Committed and pushed to `feature/lab4-requester-actions`. |
 
 ---
 
@@ -40,4 +44,125 @@
 - PR opened for `feat/lab4-spec → lab4-staging`.
 
 **Outcome:** ✅ Phase 0 complete. All spec docs committed before implementation begins.
+
+---
+
+### Session 2 — 2026-11-01
+
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** Branch 1 — Claim & Reassign implementation
+
+**What I asked the AI:**
+> "สร้าง Branch 1 feature/lab4-claim-reassign ได้เลย"
+
+**What the AI did:**
+1. Created `feature/lab4-claim-reassign` from `lab4-staging`.
+2. Implemented `POST /api/it-staff/tickets/:id/claim` — IT Staff only, sets `assignedStaffId`, auto-transitions status `OPEN → IN_PROGRESS`.
+3. Implemented `PATCH /api/it-staff/tickets/:id/reassign` — reassign to another IT Staff, validates user role.
+4. Implemented `GET /api/it-staff/users` — returns all IT Staff users for dropdown population.
+5. Wrote `server/tests/lab-04/claim-reassign.test.ts` with 13 tests (CLM-01..CLM-13).
+6. Pushed branch and PR #44.
+
+**What I verified:**
+- All 13 tests pass (CLM-01..CLM-13).
+- Claim correctly auto-sets status to `IN_PROGRESS`.
+- Reassign rejects non-IT-Staff assignees (CLM-07).
+- Admin cannot claim (CLM-09), Requester cannot claim (CLM-08).
+
+**Outcome:** ✅ Branch 1 complete. 13/13 tests passing.
+
+---
+
+### Session 3 — 2026-11-01
+
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** Branch 2 — Status Transition State Machine & IT Priority
+
+**What I asked the AI:**
+> "ทำ Branch 2 feature/lab4-status-priority ได้เลย"
+
+**What the AI did:**
+1. Created `feature/lab4-status-priority` from Branch 1.
+2. Implemented `PATCH /api/it-staff/tickets/:id/status` — state machine enforcement with `VALID_TRANSITIONS` map, IT Staff only.
+3. Implemented `PATCH /api/it-staff/tickets/:id/priority` — IT Staff + Admin, validates against `VALID_PRIORITIES` (`LOW | MEDIUM | HIGH | CRITICAL`).
+4. Added structured error codes: `INVALID_TRANSITION` (400), `VALIDATION_ERROR` (422), `NOT_FOUND` (404), `UNAUTHENTICATED` (401), `FORBIDDEN` (403).
+5. Wrote 23 tests (STS-01..STS-23).
+6. Pushed and opened PR #45.
+
+**What I verified:**
+- All 23 tests pass. Valid transitions work; OPEN→RESOLVED blocked (STS-08); CLOSED is terminal (STS-10).
+- Role restrictions correct: Requester→403 (STS-11), Admin→403 on status (STS-12), Admin→200 on priority (STS-18).
+
+**Outcome:** ✅ Branch 2 complete. 23/23 tests passing.
+
+---
+
+### Session 4 — 2026-11-01
+
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** Branch 3 — Unified Comments & Resolve endpoint
+
+**What I asked the AI:**
+> "ทำ Branch 3 feature/lab4-comments ได้เลย"
+
+**What the AI did:**
+1. Created `feature/lab4-comments` from Branch 2.
+2. Implemented `POST /api/tickets/:id/comments` — unified endpoint, PUBLIC stored in `PublicComment`, INTERNAL in `InternalNote`, Requester→PUBLIC only.
+3. Implemented `GET /api/tickets/:id/comments` — merged + sorted chronological response, INTERNAL filtered for Requesters.
+4. Implemented `POST /api/tickets/:id/resolve` — Requester only, own ticket only (IDOR guard), idempotent (RESOLVED stays RESOLVED).
+5. Wrote 23 tests (CMT-01..CMT-10, RSLV-01..RSLV-01c).
+6. Pushed and opened PR #46.
+
+**What I verified:**
+- CMT-04: Requester blocked from INTERNAL ✅. RSLV-05: IDOR blocked ✅. RSLV-01c: idempotent ✅.
+
+**Outcome:** ✅ Branch 3 complete. 23/23 tests passing.
+
+---
+
+### Session 5 — 2026-11-01
+
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** Branch 4 — Requester Actions & RBAC Evidence
+
+**What I asked the AI:**
+> "โอเค ระหว่างรอ reviewer ทำ Branch 4: feat/lab4-requester-actions ต่อได้เลย"
+
+**What the AI did:**
+1. Created `feature/lab4-requester-actions` from Branch 3 (includes all previous changes).
+2. Wrote `server/tests/lab-04/requester-actions.test.ts` — 7 tests (RAC-01..RAC-07) covering Requester resolve, IDOR, IT Staff blocked, Admin blocked, unauthenticated.
+3. Wrote `server/tests/lab-04/rbac-lab4.test.ts` — 9 tests (RBAC-L4-01..RBAC-L4-09) as formal RBAC evidence suite.
+4. Pushed and opened PR #47.
+
+**What I verified:**
+- RAC-04: IDOR blocked ✅. RAC-05/06: IT Staff + Admin blocked from resolve ✅.
+- RBAC-L4-04: Admin cannot change status ✅. RBAC-L4-06: IT Staff cannot resolve ✅.
+
+**Outcome:** ✅ Branch 4 complete. 7+9 = 16 tests passing. Total suite: 143/143.
+
+---
+
+### Session 6 — 2026-11-01
+
+**Tool used:** Antigravity (Google Deepmind)  
+**Task:** Phase 3 — Role Restrictions, Validation & Safe Failure
+
+**What I asked the AI:**
+> "ลุยเลย"
+
+**What the AI did:**
+1. Added `code` field to all error responses in `itStaffRoutes.ts` legacy endpoints:
+   - `PATCH /api/it-staff/tickets/:id` → `INVALID_TRANSITION`, `VALIDATION_ERROR`, `INVALID_ASSIGNEE`
+   - `POST /api/it-staff/tickets/:id/notes` → `VALIDATION_ERROR`, `UNAUTHENTICATED`, `NOT_FOUND`
+2. Refactored `ItTicketDetailPage.tsx` — merged Public Comments + Internal Notes into single unified thread with PUBLIC/INTERNAL toggle buttons per FR-06. UI IDs: `toggle-comment-public`, `toggle-comment-internal`, `add-unified-comment`, `send-unified-comment`.
+3. Added `PENDING` status badge to `ItQueuePage.tsx` and `TicketListPage.tsx`.
+4. Fixed `deleteMany` scope in 3 test files (`comments.test.ts`, `rbac-lab4.test.ts`, `requester-actions.test.ts`) to filter by ticket title prefix instead of global `deleteMany()` — prevents cross-test data deletion during parallel runs.
+5. Committed all changes and pushed to `feature/lab4-requester-actions`.
+
+**What I verified:**
+- Full test suite: 143/143 ✅ (ran `npx vitest run` with bypass sandbox).
+- `npx tsc --noEmit` on both `server/` and `client/` → 0 errors ✅.
+- Docker postgres restart policy set to `unless-stopped` to prevent future DB outages.
+
+**Outcome:** ✅ Phase 3 complete. All code structured for error safety with no stack trace leakage.
 
