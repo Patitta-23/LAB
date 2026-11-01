@@ -190,6 +190,7 @@ itStaffRouter.patch("/tickets/:id", async (req: Request, res: Response): Promise
       if (!allowed.includes(status)) {
         res.status(400).json({
           error: `Invalid status transition from ${existingTicket.status} to ${status}.`,
+          code: "INVALID_TRANSITION",
         });
         return;
       }
@@ -197,6 +198,13 @@ itStaffRouter.patch("/tickets/:id", async (req: Request, res: Response): Promise
     }
 
     if (itPriority) {
+      if (!(VALID_PRIORITIES as readonly string[]).includes(itPriority)) {
+        res.status(422).json({
+          error: `Invalid itPriority: ${itPriority}. Must be one of ${VALID_PRIORITIES.join(", ")}.`,
+          code: "VALIDATION_ERROR",
+        });
+        return;
+      }
       updateData["itPriority"] = itPriority;
     }
 
@@ -208,7 +216,10 @@ itStaffRouter.patch("/tickets/:id", async (req: Request, res: Response): Promise
           where: { id: parseInt(String(assignedStaffId), 10) },
         });
         if (!staffUser || (staffUser.role !== "IT_Staff" && staffUser.role !== "Administrator")) {
-          res.status(400).json({ error: "Assigned user must be an IT Staff or Administrator." });
+          res.status(400).json({
+            error: "Assigned user must be an IT Staff or Administrator.",
+            code: "INVALID_ASSIGNEE",
+          });
           return;
         }
         updateData["assignedStaffId"] = staffUser.id;
@@ -452,13 +463,13 @@ itStaffRouter.post("/tickets/:id/notes", async (req: Request, res: Response): Pr
 
   const { content } = req.body;
   if (!content || String(content).trim() === "") {
-    res.status(400).json({ error: "Note content is required." });
+    res.status(422).json({ error: "Note content is required.", code: "VALIDATION_ERROR" });
     return;
   }
 
   const currentUserId = req.session.userId;
   if (!currentUserId) {
-    res.status(401).json({ error: "Unauthenticated." });
+    res.status(401).json({ error: "Unauthenticated.", code: "UNAUTHENTICATED" });
     return;
   }
 
@@ -466,7 +477,7 @@ itStaffRouter.post("/tickets/:id/notes", async (req: Request, res: Response): Pr
     const prisma = getPrisma();
     const ticket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) {
-      res.status(404).json({ error: "Ticket not found." });
+      res.status(404).json({ error: "Ticket not found.", code: "NOT_FOUND" });
       return;
     }
 

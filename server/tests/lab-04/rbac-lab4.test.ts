@@ -33,8 +33,8 @@ beforeEach(async () => {
   const hash = await bcrypt.hash("Password1", 10);
 
   // Clean up existing RBAC test data
-  await prisma.publicComment.deleteMany();
-  await prisma.internalNote.deleteMany();
+  await prisma.publicComment.deleteMany({ where: { ticket: { title: { startsWith: "RBAC4 " } } } });
+  await prisma.internalNote.deleteMany({ where: { ticket: { title: { startsWith: "RBAC4 " } } } });
   await prisma.lab3Ticket.deleteMany({ where: { title: { startsWith: "RBAC4 " } } });
 
   // Upsert users

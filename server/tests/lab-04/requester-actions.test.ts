@@ -36,8 +36,8 @@ beforeEach(async () => {
   const hash = await bcrypt.hash("Password1", 10);
 
   // Clean up
-  await prisma.publicComment.deleteMany();
-  await prisma.internalNote.deleteMany();
+  await prisma.publicComment.deleteMany({ where: { ticket: { title: { startsWith: "RAC " } } } });
+  await prisma.internalNote.deleteMany({ where: { ticket: { title: { startsWith: "RAC " } } } });
   await prisma.lab3Ticket.deleteMany({ where: { title: { startsWith: "RAC " } } });
 
   // Upsert test users
@@ -208,3 +208,4 @@ describe("Lab 4 — Requester Actions (RAC-01 … RAC-07)", () => {
     expect(res.body).toHaveProperty("error");
   });
 });
+

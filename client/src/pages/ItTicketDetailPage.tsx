@@ -84,10 +84,15 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
   // IT Staff list for Reassign dropdown
   const [itStaffList, setItStaffList] = useState<ItStaffUser[]>([]);
 
-  // Comments / Notes
+  // Comments / Notes — unified with commentType toggle (FR-06)
+  const [commentText, setCommentText] = useState("");
+  const [commentType, setCommentType] = useState<"PUBLIC" | "INTERNAL">("PUBLIC");
+  const [commentSending, setCommentSending] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  // Keep legacy state for backward compat (used internally)
   const [newComment, setNewComment] = useState("");
   const [newNote, setNewNote] = useState("");
-  const [commentSending, setCommentSending] = useState(false);
   const [noteSending, setNoteSending] = useState(false);
 
   const loadTicket = useCallback(async () => {
@@ -182,15 +187,16 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !ticket) return;
+    const trimmed = commentText.trim();
+    if (!trimmed || !ticket) return;
     setCommentSending(true);
+    setCommentError(null);
     try {
-      // IT Staff posts as PUBLIC by default (user can toggle via commentType state)
-      await commentsApi.addComment(ticket.id, newComment.trim(), "PUBLIC");
-      setNewComment("");
+      await commentsApi.addComment(ticket.id, trimmed, commentType);
+      setCommentText("");
       await loadTicket();
-    } catch {
-      // ignore
+    } catch (err) {
+      setCommentError(err instanceof Error ? err.message : "Failed to send comment.");
     } finally {
       setCommentSending(false);
     }
@@ -200,7 +206,6 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
     if (!newNote.trim() || !ticket) return;
     setNoteSending(true);
     try {
-      // IT Staff posts Internal Note via unified comments endpoint with type=INTERNAL
       await commentsApi.addComment(ticket.id, newNote.trim(), "INTERNAL");
       setNewNote("");
       await loadTicket();
@@ -308,83 +313,105 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
             </div>
           )}
 
-          {/* Public Comments */}
+          {/* Unified Comments & Internal Notes Section (FR-06) */}
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Public Comments</h2>
-            <div style={styles.commentThread}>
-              {ticket.publicComments.length === 0 ? (
-                <p style={styles.emptyThread}>No comments yet.</p>
-              ) : (
-                ticket.publicComments.map((c: PublicComment) => (
-                  <div key={c.id} style={styles.commentBubble}>
-                    <div style={styles.commentMeta}>
-                      <strong>{c.author.name}</strong>
-                      <span style={styles.commentRole}>{c.author.role.replace("_", " ")}</span>
-                      <span style={styles.commentTime}>{formatDate(c.createdAt)}</span>
-                    </div>
-                    <p style={styles.commentContent}>{c.content}</p>
-                  </div>
-                ))
-              )}
-            </div>
-            <div style={styles.addCommentRow}>
-              <textarea
-                id="add-public-comment"
-                placeholder="Write a public comment…"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                style={styles.textarea}
-                rows={2}
-              />
-              <button
-                id="send-public-comment"
-                style={{ ...styles.sendBtn, opacity: commentSending ? 0.7 : 1 }}
-                onClick={handleAddComment}
-                disabled={commentSending || !newComment.trim()}
-              >
-                {commentSending ? "Sending…" : "Send"}
-              </button>
-            </div>
-          </div>
+            <h2 style={styles.sectionTitle}>Comments & Notes</h2>
 
-          {/* Internal Notes (IT Staff / Admin only) */}
-          <div style={{ ...styles.section, ...styles.internalSection }}>
-            <h2 style={{ ...styles.sectionTitle, color: "#7C3AED" }}>
-              🔒 Internal Notes <span style={styles.internalBadge}>IT Staff only</span>
-            </h2>
+            {/* Unified comment thread — PUBLIC shown as normal, INTERNAL with lock */}
             <div style={styles.commentThread}>
-              {ticket.internalNotes.length === 0 ? (
-                <p style={styles.emptyThread}>No internal notes yet.</p>
-              ) : (
-                ticket.internalNotes.map((n: InternalNote) => (
-                  <div key={n.id} style={{ ...styles.commentBubble, borderLeft: "3px solid #7C3AED" }}>
+              {[
+                ...ticket.publicComments.map((c: PublicComment) => ({ ...c, type: "PUBLIC" as const })),
+                ...ticket.internalNotes.map((n: InternalNote) => ({ ...n, type: "INTERNAL" as const })),
+              ]
+                .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                .map((item) => (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    style={{
+                      ...styles.commentBubble,
+                      borderLeft: item.type === "INTERNAL" ? "3px solid #7C3AED" : "3px solid #2D7A5B",
+                      background: item.type === "INTERNAL" ? "#FAF5FF" : undefined,
+                    }}
+                  >
                     <div style={styles.commentMeta}>
-                      <strong>{n.author.name}</strong>
-                      <span style={{ ...styles.commentRole, color: "#7C3AED" }}>{n.author.role.replace("_", " ")}</span>
-                      <span style={styles.commentTime}>{formatDate(n.createdAt)}</span>
+                      <strong>{item.author.name}</strong>
+                      <span style={{ ...styles.commentRole, color: item.type === "INTERNAL" ? "#7C3AED" : undefined }}>
+                        {item.author.role.replace("_", " ")}
+                      </span>
+                      {item.type === "INTERNAL" && (
+                        <span style={styles.internalBadge}>🔒 Internal</span>
+                      )}
+                      <span style={styles.commentTime}>{formatDate(item.createdAt)}</span>
                     </div>
-                    <p style={styles.commentContent}>{n.content}</p>
+                    <p style={styles.commentContent}>{item.content}</p>
                   </div>
-                ))
+                ))}
+              {ticket.publicComments.length === 0 && ticket.internalNotes.length === 0 && (
+                <p style={styles.emptyThread}>No comments or notes yet.</p>
               )}
             </div>
-            <div style={styles.addCommentRow}>
-              <textarea
-                id="add-internal-note"
-                placeholder="Write an internal note (not visible to requester)…"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                style={{ ...styles.textarea, borderColor: "#C4A8E8" }}
-                rows={2}
-              />
-              <button
-                id="send-internal-note"
-                style={{ ...styles.sendBtn, background: "#7C3AED", opacity: noteSending ? 0.7 : 1 }}
-                onClick={handleAddNote}
-                disabled={noteSending || !newNote.trim()}
-              >
-                {noteSending ? "Sending…" : "Add Note"}
-              </button>
+
+            {/* Add Comment / Note Form with PUBLIC/INTERNAL toggle (FR-06) */}
+            <div style={{ marginTop: 12 }}>
+              {/* Toggle buttons */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <button
+                  id="toggle-comment-public"
+                  style={{
+                    padding: "4px 14px", borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: "pointer",
+                    background: commentType === "PUBLIC" ? "#2D7A5B" : "#F3F4F6",
+                    color: commentType === "PUBLIC" ? "white" : "#374151",
+                    border: commentType === "PUBLIC" ? "none" : "1px solid #D1D5DB",
+                  }}
+                  onClick={() => setCommentType("PUBLIC")}
+                >
+                  💬 Public Comment
+                </button>
+                <button
+                  id="toggle-comment-internal"
+                  style={{
+                    padding: "4px 14px", borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: "pointer",
+                    background: commentType === "INTERNAL" ? "#7C3AED" : "#F3F4F6",
+                    color: commentType === "INTERNAL" ? "white" : "#374151",
+                    border: commentType === "INTERNAL" ? "none" : "1px solid #D1D5DB",
+                  }}
+                  onClick={() => setCommentType("INTERNAL")}
+                >
+                  🔒 Internal Note
+                </button>
+              </div>
+              <div style={styles.addCommentRow}>
+                <textarea
+                  id="add-unified-comment"
+                  placeholder={
+                    commentType === "PUBLIC"
+                      ? "Write a public comment (visible to requester)…"
+                      : "Write an internal note (not visible to requester)…"
+                  }
+                  value={commentText}
+                  onChange={(e) => { setCommentText(e.target.value); setCommentError(null); }}
+                  style={{
+                    ...styles.textarea,
+                    borderColor: commentType === "INTERNAL" ? "#C4A8E8" : undefined,
+                  }}
+                  rows={2}
+                />
+                <button
+                  id="send-unified-comment"
+                  style={{
+                    ...styles.sendBtn,
+                    background: commentType === "INTERNAL" ? "#7C3AED" : undefined,
+                    opacity: commentSending ? 0.7 : 1,
+                  }}
+                  onClick={handleAddComment}
+                  disabled={commentSending || !commentText.trim()}
+                >
+                  {commentSending ? "Sending…" : commentType === "INTERNAL" ? "Add Note" : "Send"}
+                </button>
+              </div>
+              {commentError && (
+                <p style={{ color: "#C0392B", fontSize: 13, marginTop: 4 }}>⚠ {commentError}</p>
+              )}
             </div>
           </div>
         </div>
