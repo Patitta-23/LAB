@@ -37,7 +37,7 @@ export interface Requester {
   department: string;
 }
 
-export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "PENDING" | "RESOLVED" | "CLOSED";
 export type ItPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export interface Ticket {
@@ -51,6 +51,12 @@ export interface Ticket {
   updatedAt: string;
   category: Category;
   _count?: { attachments: number };
+}
+
+export interface ItStaffUser {
+  id: number;
+  name: string;
+  email: string;
 }
 
 /** Lab 3 Ticket as returned by IT Staff queue */
@@ -303,8 +309,19 @@ export const itStaffApi = {
     });
   },
 
-  async claimTicket(id: number): Promise<{ message: string; assignedStaff: { id: number; name: string } }> {
+  async claimTicket(id: number): Promise<{ message: string; assignedStaff: { id: number; name: string }; status: string }> {
     return apiFetch(`/api/it-staff/tickets/${id}/claim`, { method: "POST" });
+  },
+
+  async reassignTicket(id: number, assigneeId: number): Promise<{ message: string; assignedStaff: { id: number; name: string }; status: string }> {
+    return apiFetch(`/api/it-staff/tickets/${id}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ assigneeId }),
+    });
+  },
+
+  async getItStaffUsers(): Promise<ItStaffUser[]> {
+    return apiFetch<ItStaffUser[]>("/api/it-staff/users");
   },
 
   async addNote(ticketId: number, content: string): Promise<{ note: InternalNote }> {
