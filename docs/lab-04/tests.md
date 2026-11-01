@@ -150,9 +150,9 @@
 ## Test Results (to be filled after implementation)
 
 ```
-Server tests:  ___ / ___ passing
-Client tests:  ___ / ___ passing
-Total:         ___ / ___ passing
+Server tests:  143 / 143 passing (15 test files)
+Client tests:   41 /  41 passing (9 test files)
+Total:         184 / 184 passing (24 test files)
 ```
 
 _(Update after each feature branch is merged)_

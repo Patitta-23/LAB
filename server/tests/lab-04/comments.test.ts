@@ -38,8 +38,8 @@ beforeEach(async () => {
   const hash = await bcrypt.hash("Password1", 10);
 
   // Clean up in order of dependencies (only CMT test data)
-  await prisma.publicComment.deleteMany();
-  await prisma.internalNote.deleteMany();
+  await prisma.publicComment.deleteMany({ where: { ticket: { title: { startsWith: "CMT " } } } });
+  await prisma.internalNote.deleteMany({ where: { ticket: { title: { startsWith: "CMT " } } } });
   await prisma.lab3Ticket.deleteMany({ where: { title: { startsWith: "CMT " } } });
 
   // Upsert users (safe for repeated beforeEach)

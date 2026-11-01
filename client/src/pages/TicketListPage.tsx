@@ -34,12 +34,13 @@ const STATUS_OPTIONS: { value: TicketStatus | ""; label: string }[] = [
 ];
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
-  OPEN: "New", IN_PROGRESS: "In Progress", RESOLVED: "Resolved", CLOSED: "Closed",
+  OPEN: "New", IN_PROGRESS: "In Progress", PENDING: "Pending", RESOLVED: "Resolved", CLOSED: "Closed",
 };
 
 const STATUS_COLORS: Record<TicketStatus, { bg: string; color: string; border: string }> = {
   OPEN:        { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
   IN_PROGRESS: { bg: "#fffbeb", color: "#92400e", border: "#fde68a" },
+  PENDING:     { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
   RESOLVED:    { bg: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
   CLOSED:      { bg: "#f3f4f6", color: "#374151", border: "#d1d5db" },
 };
