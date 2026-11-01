@@ -7,6 +7,7 @@ import {
   type ItPriority,
   type PublicComment,
   type InternalNote,
+  type ItStaffUser,
 } from "../api";
 import { useAuth } from "../context/AuthContext";
 
@@ -14,7 +15,8 @@ import { useAuth } from "../context/AuthContext";
 
 const NEXT_STATUSES: Record<TicketStatus, TicketStatus[]> = {
   OPEN:        ["IN_PROGRESS"],
-  IN_PROGRESS: ["RESOLVED", "CLOSED"],
+  IN_PROGRESS: ["PENDING", "RESOLVED", "CLOSED"],
+  PENDING:     ["IN_PROGRESS", "RESOLVED"],
   RESOLVED:    ["CLOSED"],
   CLOSED:      [],
 };
@@ -22,6 +24,7 @@ const NEXT_STATUSES: Record<TicketStatus, TicketStatus[]> = {
 const STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: "Open",
   IN_PROGRESS: "In Progress",
+  PENDING: "Pending",
   RESOLVED: "Resolved",
   CLOSED: "Closed",
 };
@@ -29,6 +32,7 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
 const STATUS_COLORS: Record<TicketStatus, { bg: string; color: string }> = {
   OPEN:        { bg: "#EAF4FE", color: "#1A6FAC" },
   IN_PROGRESS: { bg: "#FEF9E7", color: "#D4A017" },
+  PENDING:     { bg: "#FFF0E0", color: "#C06000" },
   RESOLVED:    { bg: "#E8F5EF", color: "#2D7A5B" },
   CLOSED:      { bg: "#F2F2F2", color: "#6B7C74" },
 };
@@ -77,10 +81,18 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [claiming, setClaiming] = useState(false);
 
-  // Comments / Notes
+  // IT Staff list for Reassign dropdown
+  const [itStaffList, setItStaffList] = useState<ItStaffUser[]>([]);
+
+  // Comments / Notes — unified with commentType toggle (FR-06)
+  const [commentText, setCommentText] = useState("");
+  const [commentType, setCommentType] = useState<"PUBLIC" | "INTERNAL">("PUBLIC");
+  const [commentSending, setCommentSending] = useState(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  // Keep legacy state for backward compat (used internally)
   const [newComment, setNewComment] = useState("");
   const [newNote, setNewNote] = useState("");
-  const [commentSending, setCommentSending] = useState(false);
   const [noteSending, setNoteSending] = useState(false);
 
   const loadTicket = useCallback(async () => {
@@ -101,17 +113,38 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
 
   useEffect(() => { loadTicket(); }, [loadTicket]);
 
+  // Load IT Staff list for Reassign dropdown (AC-01, AC-02)
+  useEffect(() => {
+    itStaffApi.getItStaffUsers()
+      .then(setItStaffList)
+      .catch(() => setItStaffList([]));
+  }, []);
+
   const handleSave = async () => {
     if (!ticket) return;
     setSaving(true);
     setSaveMsg(null);
     setSaveError(null);
     try {
-      await itStaffApi.patchTicket(ticket.id, {
-        status: selectedStatus || undefined,
-        itPriority: selectedPriority || undefined,
-        assignedStaffId: selectedAssigneeId ? Number(selectedAssigneeId) : undefined,
-      });
+      const promises: Promise<unknown>[] = [];
+
+      // Status change via dedicated endpoint (IT_Staff only)
+      if (selectedStatus && selectedStatus !== ticket.status) {
+        promises.push(itStaffApi.changeStatus(ticket.id, selectedStatus as TicketStatus));
+      }
+
+      // Priority change via dedicated endpoint
+      if (selectedPriority && selectedPriority !== ticket.itPriority) {
+        promises.push(itStaffApi.changePriority(ticket.id, selectedPriority as ItPriority));
+      }
+
+      if (promises.length === 0) {
+        setSaveMsg("No changes to save.");
+        setSaving(false);
+        return;
+      }
+
+      await Promise.all(promises);
       setSaveMsg("Changes saved successfully.");
       await loadTicket();
     } catch (err) {
@@ -124,8 +157,11 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
   const handleClaim = async () => {
     if (!ticket) return;
     setClaiming(true);
+    setSaveError(null);
+    setSaveMsg(null);
     try {
-      await itStaffApi.claimTicket(ticket.id);
+      const result = await itStaffApi.claimTicket(ticket.id);
+      setSaveMsg(result.message);
       await loadTicket();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to claim.");
@@ -134,15 +170,33 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
     }
   };
 
-  const handleAddComment = async () => {
-    if (!newComment.trim() || !ticket) return;
-    setCommentSending(true);
+  const handleReassign = async (newAssigneeId: string) => {
+    if (!ticket || !newAssigneeId) return;
+    setClaiming(true);
+    setSaveError(null);
+    setSaveMsg(null);
     try {
-      await commentsApi.addComment(ticket.id, newComment.trim());
-      setNewComment("");
+      const result = await itStaffApi.reassignTicket(ticket.id, Number(newAssigneeId));
+      setSaveMsg(result.message);
       await loadTicket();
-    } catch {
-      // ignore
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to reassign.");
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    const trimmed = commentText.trim();
+    if (!trimmed || !ticket) return;
+    setCommentSending(true);
+    setCommentError(null);
+    try {
+      await commentsApi.addComment(ticket.id, trimmed, commentType);
+      setCommentText("");
+      await loadTicket();
+    } catch (err) {
+      setCommentError(err instanceof Error ? err.message : "Failed to send comment.");
     } finally {
       setCommentSending(false);
     }
@@ -152,7 +206,7 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
     if (!newNote.trim() || !ticket) return;
     setNoteSending(true);
     try {
-      await itStaffApi.addNote(ticket.id, newNote.trim());
+      await commentsApi.addComment(ticket.id, newNote.trim(), "INTERNAL");
       setNewNote("");
       await loadTicket();
     } catch {
@@ -259,83 +313,105 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
             </div>
           )}
 
-          {/* Public Comments */}
+          {/* Unified Comments & Internal Notes Section (FR-06) */}
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Public Comments</h2>
-            <div style={styles.commentThread}>
-              {ticket.publicComments.length === 0 ? (
-                <p style={styles.emptyThread}>No comments yet.</p>
-              ) : (
-                ticket.publicComments.map((c: PublicComment) => (
-                  <div key={c.id} style={styles.commentBubble}>
-                    <div style={styles.commentMeta}>
-                      <strong>{c.author.name}</strong>
-                      <span style={styles.commentRole}>{c.author.role.replace("_", " ")}</span>
-                      <span style={styles.commentTime}>{formatDate(c.createdAt)}</span>
-                    </div>
-                    <p style={styles.commentContent}>{c.content}</p>
-                  </div>
-                ))
-              )}
-            </div>
-            <div style={styles.addCommentRow}>
-              <textarea
-                id="add-public-comment"
-                placeholder="Write a public comment…"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                style={styles.textarea}
-                rows={2}
-              />
-              <button
-                id="send-public-comment"
-                style={{ ...styles.sendBtn, opacity: commentSending ? 0.7 : 1 }}
-                onClick={handleAddComment}
-                disabled={commentSending || !newComment.trim()}
-              >
-                {commentSending ? "Sending…" : "Send"}
-              </button>
-            </div>
-          </div>
+            <h2 style={styles.sectionTitle}>Comments & Notes</h2>
 
-          {/* Internal Notes (IT Staff / Admin only) */}
-          <div style={{ ...styles.section, ...styles.internalSection }}>
-            <h2 style={{ ...styles.sectionTitle, color: "#7C3AED" }}>
-              🔒 Internal Notes <span style={styles.internalBadge}>IT Staff only</span>
-            </h2>
+            {/* Unified comment thread — PUBLIC shown as normal, INTERNAL with lock */}
             <div style={styles.commentThread}>
-              {ticket.internalNotes.length === 0 ? (
-                <p style={styles.emptyThread}>No internal notes yet.</p>
-              ) : (
-                ticket.internalNotes.map((n: InternalNote) => (
-                  <div key={n.id} style={{ ...styles.commentBubble, borderLeft: "3px solid #7C3AED" }}>
+              {[
+                ...ticket.publicComments.map((c: PublicComment) => ({ ...c, type: "PUBLIC" as const })),
+                ...ticket.internalNotes.map((n: InternalNote) => ({ ...n, type: "INTERNAL" as const })),
+              ]
+                .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                .map((item) => (
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    style={{
+                      ...styles.commentBubble,
+                      borderLeft: item.type === "INTERNAL" ? "3px solid #7C3AED" : "3px solid #2D7A5B",
+                      background: item.type === "INTERNAL" ? "#FAF5FF" : undefined,
+                    }}
+                  >
                     <div style={styles.commentMeta}>
-                      <strong>{n.author.name}</strong>
-                      <span style={{ ...styles.commentRole, color: "#7C3AED" }}>{n.author.role.replace("_", " ")}</span>
-                      <span style={styles.commentTime}>{formatDate(n.createdAt)}</span>
+                      <strong>{item.author.name}</strong>
+                      <span style={{ ...styles.commentRole, color: item.type === "INTERNAL" ? "#7C3AED" : undefined }}>
+                        {item.author.role.replace("_", " ")}
+                      </span>
+                      {item.type === "INTERNAL" && (
+                        <span style={styles.internalBadge}>🔒 Internal</span>
+                      )}
+                      <span style={styles.commentTime}>{formatDate(item.createdAt)}</span>
                     </div>
-                    <p style={styles.commentContent}>{n.content}</p>
+                    <p style={styles.commentContent}>{item.content}</p>
                   </div>
-                ))
+                ))}
+              {ticket.publicComments.length === 0 && ticket.internalNotes.length === 0 && (
+                <p style={styles.emptyThread}>No comments or notes yet.</p>
               )}
             </div>
-            <div style={styles.addCommentRow}>
-              <textarea
-                id="add-internal-note"
-                placeholder="Write an internal note (not visible to requester)…"
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                style={{ ...styles.textarea, borderColor: "#C4A8E8" }}
-                rows={2}
-              />
-              <button
-                id="send-internal-note"
-                style={{ ...styles.sendBtn, background: "#7C3AED", opacity: noteSending ? 0.7 : 1 }}
-                onClick={handleAddNote}
-                disabled={noteSending || !newNote.trim()}
-              >
-                {noteSending ? "Sending…" : "Add Note"}
-              </button>
+
+            {/* Add Comment / Note Form with PUBLIC/INTERNAL toggle (FR-06) */}
+            <div style={{ marginTop: 12 }}>
+              {/* Toggle buttons */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                <button
+                  id="toggle-comment-public"
+                  style={{
+                    padding: "4px 14px", borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: "pointer",
+                    background: commentType === "PUBLIC" ? "#2D7A5B" : "#F3F4F6",
+                    color: commentType === "PUBLIC" ? "white" : "#374151",
+                    border: commentType === "PUBLIC" ? "none" : "1px solid #D1D5DB",
+                  }}
+                  onClick={() => setCommentType("PUBLIC")}
+                >
+                  💬 Public Comment
+                </button>
+                <button
+                  id="toggle-comment-internal"
+                  style={{
+                    padding: "4px 14px", borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: "pointer",
+                    background: commentType === "INTERNAL" ? "#7C3AED" : "#F3F4F6",
+                    color: commentType === "INTERNAL" ? "white" : "#374151",
+                    border: commentType === "INTERNAL" ? "none" : "1px solid #D1D5DB",
+                  }}
+                  onClick={() => setCommentType("INTERNAL")}
+                >
+                  🔒 Internal Note
+                </button>
+              </div>
+              <div style={styles.addCommentRow}>
+                <textarea
+                  id="add-unified-comment"
+                  placeholder={
+                    commentType === "PUBLIC"
+                      ? "Write a public comment (visible to requester)…"
+                      : "Write an internal note (not visible to requester)…"
+                  }
+                  value={commentText}
+                  onChange={(e) => { setCommentText(e.target.value); setCommentError(null); }}
+                  style={{
+                    ...styles.textarea,
+                    borderColor: commentType === "INTERNAL" ? "#C4A8E8" : undefined,
+                  }}
+                  rows={2}
+                />
+                <button
+                  id="send-unified-comment"
+                  style={{
+                    ...styles.sendBtn,
+                    background: commentType === "INTERNAL" ? "#7C3AED" : undefined,
+                    opacity: commentSending ? 0.7 : 1,
+                  }}
+                  onClick={handleAddComment}
+                  disabled={commentSending || !commentText.trim()}
+                >
+                  {commentSending ? "Sending…" : commentType === "INTERNAL" ? "Add Note" : "Send"}
+                </button>
+              </div>
+              {commentError && (
+                <p style={{ color: "#C0392B", fontSize: 13, marginTop: 4 }}>⚠ {commentError}</p>
+              )}
             </div>
           </div>
         </div>
@@ -345,7 +421,7 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
           <div style={styles.controlCard}>
             <h2 style={styles.controlTitle}>Manage Ticket</h2>
 
-            {/* Claim */}
+            {/* Claim / Reassign */}
             {!isAlreadyAssignedToMe && (
               <button
                 id="claim-ticket-btn"
@@ -360,25 +436,27 @@ export default function ItTicketDetailPage({ ticketId, onBack }: Props) {
               <div style={styles.claimedBadge}>✅ Assigned to you</div>
             )}
 
-            {/* Assignee */}
+            {/* Assignee / Reassign dropdown */}
             <div style={styles.controlField}>
-              <label htmlFor="assignee-select" style={styles.controlLabel}>Assignee</label>
+              <label htmlFor="assignee-select" style={styles.controlLabel}>
+                {ticket.assignedStaff ? "Reassign To" : "Assign To"}
+              </label>
               <select
                 id="assignee-select"
                 value={selectedAssigneeId}
-                onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedAssigneeId(e.target.value);
+                  if (e.target.value) handleReassign(e.target.value);
+                }}
                 style={styles.controlSelect}
+                disabled={claiming}
               >
-                <option value="">Unassigned</option>
-                {/* Show current assignee at minimum */}
-                {ticket.assignedStaff && (
-                  <option value={String(ticket.assignedStaff.id)}>
-                    {ticket.assignedStaff.name}
+                <option value="">— Unassigned —</option>
+                {itStaffList.map((s) => (
+                  <option key={s.id} value={String(s.id)}>
+                    {s.name}{s.id === user?.id ? " (me)" : ""}
                   </option>
-                )}
-                {user && !ticket.assignedStaff && (
-                  <option value={String(user.id)}>{user.name} (me)</option>
-                )}
+                ))}
               </select>
             </div>
 

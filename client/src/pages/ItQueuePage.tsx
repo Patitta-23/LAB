@@ -6,6 +6,7 @@ import { itStaffApi, type Lab3Ticket, type TicketStatus, type ItPriority } from 
 const STATUS_COLORS: Record<TicketStatus, { bg: string; color: string }> = {
   OPEN:        { bg: "#EAF4FE", color: "#1A6FAC" },
   IN_PROGRESS: { bg: "#FEF9E7", color: "#D4A017" },
+  PENDING:     { bg: "#FFF0E0", color: "#C06000" },
   RESOLVED:    { bg: "#E8F5EF", color: "#2D7A5B" },
   CLOSED:      { bg: "#F2F2F2", color: "#6B7C74" },
 };

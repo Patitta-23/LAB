@@ -37,7 +37,7 @@ export interface Requester {
   department: string;
 }
 
-export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "PENDING" | "RESOLVED" | "CLOSED";
 export type ItPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export interface Ticket {
@@ -51,6 +51,12 @@ export interface Ticket {
   updatedAt: string;
   category: Category;
   _count?: { attachments: number };
+}
+
+export interface ItStaffUser {
+  id: number;
+  name: string;
+  email: string;
 }
 
 /** Lab 3 Ticket as returned by IT Staff queue */
@@ -69,6 +75,7 @@ export interface Lab3Ticket {
 
 export interface PublicComment {
   id: number;
+  type: "PUBLIC" | "INTERNAL";
   author: { id: number; name: string; role: UserRole };
   content: string;
   createdAt: string;
@@ -76,6 +83,7 @@ export interface PublicComment {
 
 export interface InternalNote {
   id: number;
+  type?: "INTERNAL";
   author: { id: number; name: string; role: UserRole };
   content: string;
   createdAt: string;
@@ -303,8 +311,33 @@ export const itStaffApi = {
     });
   },
 
-  async claimTicket(id: number): Promise<{ message: string; assignedStaff: { id: number; name: string } }> {
+  async claimTicket(id: number): Promise<{ message: string; assignedStaff: { id: number; name: string }; status: string }> {
     return apiFetch(`/api/it-staff/tickets/${id}/claim`, { method: "POST" });
+  },
+
+  async reassignTicket(id: number, assigneeId: number): Promise<{ message: string; assignedStaff: { id: number; name: string }; status: string }> {
+    return apiFetch(`/api/it-staff/tickets/${id}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ assigneeId }),
+    });
+  },
+
+  async getItStaffUsers(): Promise<ItStaffUser[]> {
+    return apiFetch<ItStaffUser[]>("/api/it-staff/users");
+  },
+
+  async changeStatus(id: number, status: TicketStatus): Promise<{ id: number; status: string; updatedAt: string }> {
+    return apiFetch(`/api/it-staff/tickets/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async changePriority(id: number, itPriority: ItPriority): Promise<{ id: number; itPriority: string; updatedAt: string }> {
+    return apiFetch(`/api/it-staff/tickets/${id}/priority`, {
+      method: "PATCH",
+      body: JSON.stringify({ itPriority }),
+    });
   },
 
   async addNote(ticketId: number, content: string): Promise<{ note: InternalNote }> {
@@ -318,14 +351,16 @@ export const itStaffApi = {
 // ── Lab 3 — Comments API ───────────────────────────────────────────────
 
 export const commentsApi = {
+  /** Get all comments (PUBLIC + INTERNAL for IT Staff/Admin; PUBLIC only for Requester) */
   async getComments(ticketId: number): Promise<{ comments: PublicComment[] }> {
     return apiFetch(`/api/tickets/${ticketId}/comments`);
   },
 
-  async addComment(ticketId: number, content: string): Promise<{ comment: PublicComment }> {
+  /** Post a comment — type "PUBLIC" (default) or "INTERNAL" (IT Staff/Admin only) */
+  async addComment(ticketId: number, content: string, type: "PUBLIC" | "INTERNAL" = "PUBLIC"): Promise<{ comment: PublicComment }> {
     return apiFetch(`/api/tickets/${ticketId}/comments`, {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, type }),
     });
   },
 

@@ -7,14 +7,16 @@ export const itStaffRouter = Router();
 // Protect all IT Staff routes with IT_Staff or Administrator role guard
 itStaffRouter.use(requireAuth, requireRole("IT_Staff", "Administrator"));
 
-// Valid status transitions map per BR-10
+// Valid status transitions map per BR-05 (Lab 4) — includes PENDING
 const VALID_TRANSITIONS: Record<string, string[]> = {
-  OPEN: ["IN_PROGRESS", "CANCELLED"],
-  IN_PROGRESS: ["RESOLVED", "CLOSED", "CANCELLED", "OPEN"],
-  RESOLVED: ["CLOSED", "IN_PROGRESS"],
-  CLOSED: ["IN_PROGRESS"], // Reopen if needed
-  CANCELLED: [],
+  OPEN:        ["IN_PROGRESS"],
+  IN_PROGRESS: ["PENDING", "RESOLVED", "CLOSED"],
+  PENDING:     ["IN_PROGRESS", "RESOLVED"],
+  RESOLVED:    ["CLOSED"],
+  CLOSED:      [],
 };
+
+const VALID_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 
 // ---------------------------------------------------------------------------
 // GET /api/it-staff/tickets
@@ -188,6 +190,7 @@ itStaffRouter.patch("/tickets/:id", async (req: Request, res: Response): Promise
       if (!allowed.includes(status)) {
         res.status(400).json({
           error: `Invalid status transition from ${existingTicket.status} to ${status}.`,
+          code: "INVALID_TRANSITION",
         });
         return;
       }
@@ -195,6 +198,13 @@ itStaffRouter.patch("/tickets/:id", async (req: Request, res: Response): Promise
     }
 
     if (itPriority) {
+      if (!(VALID_PRIORITIES as readonly string[]).includes(itPriority)) {
+        res.status(422).json({
+          error: `Invalid itPriority: ${itPriority}. Must be one of ${VALID_PRIORITIES.join(", ")}.`,
+          code: "VALIDATION_ERROR",
+        });
+        return;
+      }
       updateData["itPriority"] = itPriority;
     }
 
@@ -206,7 +216,10 @@ itStaffRouter.patch("/tickets/:id", async (req: Request, res: Response): Promise
           where: { id: parseInt(String(assignedStaffId), 10) },
         });
         if (!staffUser || (staffUser.role !== "IT_Staff" && staffUser.role !== "Administrator")) {
-          res.status(400).json({ error: "Assigned user must be an IT Staff or Administrator." });
+          res.status(400).json({
+            error: "Assigned user must be an IT Staff or Administrator.",
+            code: "INVALID_ASSIGNEE",
+          });
           return;
         }
         updateData["assignedStaffId"] = staffUser.id;
@@ -233,44 +246,202 @@ itStaffRouter.patch("/tickets/:id", async (req: Request, res: Response): Promise
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/it-staff/tickets/:id/claim
-// Assign ticket to current logged-in IT Staff member
+// GET /api/it-staff/users
+// List active IT Staff members (for Reassign dropdown)
 // ---------------------------------------------------------------------------
-itStaffRouter.post("/tickets/:id/claim", async (req: Request, res: Response): Promise<void> => {
+itStaffRouter.get("/users", async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const prisma = getPrisma();
+    const staff = await prisma.user.findMany({
+      where: { role: "IT_Staff", isActive: true },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: "asc" },
+    });
+    res.status(200).json(staff);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/it-staff/tickets/:id/status
+// Change ticket status — IT_Staff ONLY, enforces state machine (BR-05, AC-05, AC-06)
+// ---------------------------------------------------------------------------
+itStaffRouter.patch("/tickets/:id/status", requireRole("IT_Staff"), async (req: Request, res: Response): Promise<void> => {
   const ticketId = parseInt(req.params.id, 10);
   if (isNaN(ticketId)) {
-    res.status(400).json({ error: "Invalid ticket ID." });
+    res.status(400).json({ error: "Invalid ticket ID.", code: "INVALID_ID" });
     return;
   }
 
-  const currentUserId = req.session.userId;
-  if (!currentUserId) {
-    res.status(401).json({ error: "Unauthenticated." });
+  const { status } = req.body;
+  if (!status || typeof status !== "string") {
+    res.status(422).json({ error: "status is required.", code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  const allStatuses = ["OPEN", "IN_PROGRESS", "PENDING", "RESOLVED", "CLOSED"];
+  if (!allStatuses.includes(status)) {
+    res.status(422).json({ error: `Invalid status value: ${status}.`, code: "VALIDATION_ERROR" });
     return;
   }
 
   try {
     const prisma = getPrisma();
-    const existingTicket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
-
-    if (!existingTicket) {
-      res.status(404).json({ error: "Ticket not found." });
+    const ticket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found.", code: "NOT_FOUND" });
       return;
     }
 
-    const currentUser = await prisma.user.findUnique({
-      where: { id: currentUserId },
-      select: { id: true, name: true, email: true },
+    if (ticket.status === status) {
+      res.status(200).json({ id: ticket.id, status: ticket.status, updatedAt: ticket.updatedAt });
+      return;
+    }
+
+    const allowed = VALID_TRANSITIONS[ticket.status] ?? [];
+    if (!allowed.includes(status)) {
+      res.status(400).json({
+        error: `Invalid status transition from ${ticket.status} to ${status}.`,
+        code: "INVALID_TRANSITION",
+      });
+      return;
+    }
+
+    const updated = await prisma.lab3Ticket.update({
+      where: { id: ticketId },
+      data: { status: status as "OPEN" | "IN_PROGRESS" | "PENDING" | "RESOLVED" | "CLOSED" },
+      select: { id: true, status: true, updatedAt: true },
     });
+
+    res.status(200).json({ id: updated.id, status: updated.status, updatedAt: updated.updatedAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/it-staff/tickets/:id/priority
+// Change IT Priority — IT_Staff + Administrator (BR-04, AC-04)
+// ---------------------------------------------------------------------------
+itStaffRouter.patch("/tickets/:id/priority", async (req: Request, res: Response): Promise<void> => {
+  const ticketId = parseInt(req.params.id, 10);
+  if (isNaN(ticketId)) {
+    res.status(400).json({ error: "Invalid ticket ID.", code: "INVALID_ID" });
+    return;
+  }
+
+  const { itPriority } = req.body;
+  if (!itPriority || typeof itPriority !== "string") {
+    res.status(422).json({ error: "itPriority is required.", code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  if (!(VALID_PRIORITIES as readonly string[]).includes(itPriority)) {
+    res.status(422).json({
+      error: `Invalid itPriority value: ${itPriority}. Must be one of ${VALID_PRIORITIES.join(", ")}.`,
+      code: "VALIDATION_ERROR",
+    });
+    return;
+  }
+
+  try {
+    const prisma = getPrisma();
+    const ticket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      res.status(404).json({ error: "Ticket not found.", code: "NOT_FOUND" });
+      return;
+    }
+
+    const updated = await prisma.lab3Ticket.update({
+      where: { id: ticketId },
+      data: { itPriority: itPriority as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" },
+      select: { id: true, itPriority: true, updatedAt: true },
+    });
+
+    res.status(200).json({ id: updated.id, itPriority: updated.itPriority, updatedAt: updated.updatedAt });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/it-staff/tickets/:id/claim
+// Claim ticket to self, or Reassign to another IT Staff (assigneeId in body)
+// IT_Staff ONLY — Administrator cannot claim (AC-06)
+// Side-effect: if ticket is OPEN → auto-set to IN_PROGRESS (BR-03, AC-03)
+// ---------------------------------------------------------------------------
+itStaffRouter.post("/tickets/:id/claim", requireRole("IT_Staff"), async (req: Request, res: Response): Promise<void> => {
+  const ticketId = parseInt(req.params.id, 10);
+  if (isNaN(ticketId)) {
+    res.status(400).json({ error: "Invalid ticket ID.", code: "INVALID_ID" });
+    return;
+  }
+
+  const currentUserId = req.session.userId;
+  if (!currentUserId) {
+    res.status(401).json({ error: "Unauthenticated.", code: "UNAUTHENTICATED" });
+    return;
+  }
+
+  // assigneeId in body → Reassign; omitted → Claim to self
+  const rawAssigneeId = req.body?.assigneeId;
+  const targetUserId: number =
+    rawAssigneeId !== undefined
+      ? parseInt(String(rawAssigneeId), 10)
+      : currentUserId;
+
+  if (isNaN(targetUserId)) {
+    res.status(422).json({ error: "assigneeId must be a valid integer.", code: "VALIDATION_ERROR" });
+    return;
+  }
+
+  try {
+    const prisma = getPrisma();
+
+    // Verify ticket exists
+    const existingTicket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
+    if (!existingTicket) {
+      res.status(404).json({ error: "Ticket not found.", code: "NOT_FOUND" });
+      return;
+    }
+
+    // Verify target user is IT_Staff (AC-CLM-07)
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: { id: true, name: true, email: true, role: true, isActive: true },
+    });
+    if (!targetUser || targetUser.role !== "IT_Staff" || !targetUser.isActive) {
+      res.status(400).json({
+        error: "Assigned user must be an active IT Staff member.",
+        code: "INVALID_ASSIGNEE",
+      });
+      return;
+    }
+
+    // Auto-set IN_PROGRESS if currently OPEN (BR-03, AC-03)
+    const newStatus =
+      existingTicket.status === "OPEN" ? "IN_PROGRESS" : existingTicket.status;
 
     const updatedTicket = await prisma.lab3Ticket.update({
       where: { id: ticketId },
-      data: { assignedStaffId: currentUserId },
+      data: {
+        assignedStaffId: targetUserId,
+        status: newStatus,
+      },
+      include: {
+        assignedStaff: { select: { id: true, name: true, email: true } },
+      },
     });
 
+    const isReassign = rawAssigneeId !== undefined;
     res.status(200).json({
-      message: "Ticket claimed successfully.",
-      assignedStaff: currentUser,
+      message: isReassign ? "Ticket reassigned successfully." : "Ticket claimed successfully.",
+      assignedStaff: updatedTicket.assignedStaff,
+      status: updatedTicket.status,
       ticket: updatedTicket,
     });
   } catch (err) {
@@ -292,13 +463,13 @@ itStaffRouter.post("/tickets/:id/notes", async (req: Request, res: Response): Pr
 
   const { content } = req.body;
   if (!content || String(content).trim() === "") {
-    res.status(400).json({ error: "Note content is required." });
+    res.status(422).json({ error: "Note content is required.", code: "VALIDATION_ERROR" });
     return;
   }
 
   const currentUserId = req.session.userId;
   if (!currentUserId) {
-    res.status(401).json({ error: "Unauthenticated." });
+    res.status(401).json({ error: "Unauthenticated.", code: "UNAUTHENTICATED" });
     return;
   }
 
@@ -306,7 +477,7 @@ itStaffRouter.post("/tickets/:id/notes", async (req: Request, res: Response): Pr
     const prisma = getPrisma();
     const ticket = await prisma.lab3Ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) {
-      res.status(404).json({ error: "Ticket not found." });
+      res.status(404).json({ error: "Ticket not found.", code: "NOT_FOUND" });
       return;
     }
 
